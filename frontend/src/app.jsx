@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import Trainers from "./pages/Trainers";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -30,7 +31,14 @@ function App() {
         }
       />
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route
+        path="/trainers"
+        element={
+          <ProtectedRoute>
+            <Trainers />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }

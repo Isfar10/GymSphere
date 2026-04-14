@@ -1,5 +1,26 @@
 const mongoose = require("mongoose");
 
+const availabilitySchema = new mongoose.Schema(
+  {
+    day: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    start: {
+      type: String,
+      trim: true,
+      default: ""
+    },
+    end: {
+      type: String,
+      trim: true,
+      default: ""
+    }
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -24,6 +45,8 @@ const userSchema = new mongoose.Schema(
       enum: ["trainee", "trainer", "admin"],
       default: "trainee"
     },
+
+    // Existing trainee/general profile fields
     fitnessGoal: {
       type: String,
       default: ""
@@ -39,6 +62,44 @@ const userSchema = new mongoose.Schema(
     weight: {
       type: Number,
       default: null
+    },
+
+    // New trainer profile fields
+    bio: {
+      type: String,
+      default: ""
+    },
+    specializations: {
+      type: [String],
+      default: []
+    },
+    certifications: {
+      type: [String],
+      default: []
+    },
+    experienceYears: {
+      type: Number,
+      default: null
+    },
+    hourlyRate: {
+      type: Number,
+      default: null
+    },
+    availability: {
+      type: [availabilitySchema],
+      default: []
+    },
+    rating: {
+      type: Number,
+      default: 0
+    },
+    reviewCount: {
+      type: Number,
+      default: 0
+    },
+    isProfileComplete: {
+      type: Boolean,
+      default: false
     }
   },
   { timestamps: true }

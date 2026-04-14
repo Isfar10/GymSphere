@@ -2,15 +2,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
-const createToken = (user) => {
-  return jwt.sign(
-    {
-      userId: user._id,
-      role: user.role
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+const createToken = (userId) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: "7d"
+  });
 };
 
 const formatUserResponse = (user) => {
@@ -23,8 +18,19 @@ const formatUserResponse = (user) => {
     age: user.age,
     height: user.height,
     weight: user.weight,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt
+
+    // Trainer fields
+    bio: user.bio,
+    specializations: user.specializations,
+    certifications: user.certifications,
+    experienceYears: user.experienceYears,
+    hourlyRate: user.hourlyRate,
+    availability: user.availability,
+    rating: user.rating,
+    reviewCount: user.reviewCount,
+    isProfileComplete: user.isProfileComplete,
+
+    createdAt: user.createdAt
   };
 };
 
@@ -35,7 +41,7 @@ const registerUser = async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Name, email and password are required"
+        message: "Name, email, and password are required"
       });
     }
 
@@ -57,7 +63,7 @@ const registerUser = async (req, res) => {
       role: role || "trainee"
     });
 
-    const token = createToken(user);
+    const token = createToken(user._id);
 
     return res.status(201).json({
       success: true,
@@ -89,20 +95,20 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password"
+        message: "Invalid credentials"
       });
     }
 
-    const isPasswordMatched = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password);
 
-    if (!isPasswordMatched) {
+    if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password"
+        message: "Invalid credentials"
       });
     }
 
-    const token = createToken(user);
+    const token = createToken(user._id);
 
     return res.status(200).json({
       success: true,
