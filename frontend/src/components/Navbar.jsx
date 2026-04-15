@@ -33,6 +33,13 @@ const Navbar = () => {
         </Link>
 
         <Link
+          to="/bookings"
+          className={location.pathname === "/bookings" ? "active-link" : ""}
+        >
+          Bookings
+        </Link>
+
+        <Link
           to="/profile"
           className={location.pathname === "/profile" ? "active-link" : ""}
         >

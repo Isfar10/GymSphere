@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import API from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const defaultFilters = {
   search: "",
@@ -11,22 +12,45 @@ const defaultFilters = {
 };
 
 const Trainers = () => {
+  const { user } = useAuth();
+
   const [filters, setFilters] = useState(defaultFilters);
   const [trainers, setTrainers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const fetchTrainers = async () => {
+  const [bookingForms, setBookingForms] = useState({});
+  const [bookingMessage, setBookingMessage] = useState("");
+  const [bookingError, setBookingError] = useState("");
+  const [bookingLoadingId, setBookingLoadingId] = useState("");
+
+  const fetchTrainers = async (activeFilters = filters) => {
     try {
       setLoading(true);
       setError("");
 
       const params = Object.fromEntries(
-        Object.entries(filters).filter(([, value]) => value !== "")
+        Object.entries(activeFilters).filter(([, value]) => value !== "")
       );
 
       const response = await API.get("/users/trainers", { params });
-      setTrainers(response.data.trainers || []);
+      const trainerList = response.data.trainers || [];
+
+      setTrainers(trainerList);
+
+      const initialForms = {};
+      trainerList.forEach((trainer) => {
+        initialForms[trainer.id] = {
+          sessionDate: "",
+          selectedSlot:
+            trainer.availability?.length > 0
+              ? `${trainer.availability[0].day}|${trainer.availability[0].start}|${trainer.availability[0].end}`
+              : "",
+          notes: ""
+        };
+      });
+
+      setBookingForms(initialForms);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load trainers");
     } finally {
@@ -47,14 +71,67 @@ const Trainers = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchTrainers();
+    fetchTrainers(filters);
   };
 
   const clearFilters = () => {
     setFilters(defaultFilters);
-    setTimeout(() => {
-      fetchTrainers();
-    }, 0);
+    fetchTrainers(defaultFilters);
+  };
+
+  const handleBookingFieldChange = (trainerId, field, value) => {
+    setBookingForms((prev) => ({
+      ...prev,
+      [trainerId]: {
+        ...prev[trainerId],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleBookSession = async (trainer) => {
+    try {
+      setBookingMessage("");
+      setBookingError("");
+      setBookingLoadingId(trainer.id);
+
+      const form = bookingForms[trainer.id];
+
+      if (!form?.sessionDate) {
+        setBookingError("Please select a session date");
+        return;
+      }
+
+      if (!form?.selectedSlot) {
+        setBookingError("Please select an available slot");
+        return;
+      }
+
+      const [day, start, end] = form.selectedSlot.split("|");
+
+      await API.post("/bookings", {
+        trainerId: trainer.id,
+        sessionDate: form.sessionDate,
+        day,
+        start,
+        end,
+        notes: form.notes
+      });
+
+      setBookingMessage(`Session booked with ${trainer.name}`);
+      setBookingForms((prev) => ({
+        ...prev,
+        [trainer.id]: {
+          ...prev[trainer.id],
+          sessionDate: "",
+          notes: ""
+        }
+      }));
+    } catch (err) {
+      setBookingError(err.response?.data?.message || "Failed to create booking");
+    } finally {
+      setBookingLoadingId("");
+    }
   };
 
   return (
@@ -120,6 +197,7 @@ const Trainers = () => {
             </select>
 
             <button type="submit">Search Trainers</button>
+
             <button
               type="button"
               onClick={clearFilters}
@@ -132,6 +210,8 @@ const Trainers = () => {
           <div className="dashboard-card">
             <h2>Available Trainers</h2>
 
+            {bookingMessage && <p className="success-text">{bookingMessage}</p>}
+            {bookingError && <p className="error-text">{bookingError}</p>}
             {loading && <p>Loading trainers...</p>}
             {error && <p className="error-text">{error}</p>}
 
@@ -218,6 +298,75 @@ const Trainers = () => {
                           : "Not listed"}
                       </p>
                     </div>
+
+                    {user?.role === "trainee" && trainer.availability?.length > 0 && (
+                      <div
+                        style={{
+                          marginTop: "18px",
+                          paddingTop: "16px",
+                          borderTop: "1px solid rgba(255,255,255,0.08)"
+                        }}
+                      >
+                        <h4 style={{ marginBottom: "12px" }}>Book a Session</h4>
+
+                        <input
+                          type="date"
+                          value={bookingForms[trainer.id]?.sessionDate || ""}
+                          onChange={(e) =>
+                            handleBookingFieldChange(
+                              trainer.id,
+                              "sessionDate",
+                              e.target.value
+                            )
+                          }
+                        />
+
+                        <select
+                          value={bookingForms[trainer.id]?.selectedSlot || ""}
+                          onChange={(e) =>
+                            handleBookingFieldChange(
+                              trainer.id,
+                              "selectedSlot",
+                              e.target.value
+                            )
+                          }
+                          style={{ marginTop: "10px" }}
+                        >
+                          {trainer.availability.map((slot, index) => (
+                            <option
+                              key={`${trainer.id}-slot-${index}`}
+                              value={`${slot.day}|${slot.start}|${slot.end}`}
+                            >
+                              {slot.day} | {slot.start} - {slot.end}
+                            </option>
+                          ))}
+                        </select>
+
+                        <textarea
+                          rows={3}
+                          placeholder="Add notes for the trainer"
+                          value={bookingForms[trainer.id]?.notes || ""}
+                          onChange={(e) =>
+                            handleBookingFieldChange(
+                              trainer.id,
+                              "notes",
+                              e.target.value
+                            )
+                          }
+                          style={{ marginTop: "10px" }}
+                        />
+
+                        <button
+                          onClick={() => handleBookSession(trainer)}
+                          disabled={bookingLoadingId === trainer.id}
+                          style={{ marginTop: "10px" }}
+                        >
+                          {bookingLoadingId === trainer.id
+                            ? "Booking..."
+                            : "Book Session"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
