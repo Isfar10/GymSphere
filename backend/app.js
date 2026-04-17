@@ -4,11 +4,13 @@ const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
+const workoutRoutes = require("./routes/workoutRoutes");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/workout", workoutRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "GymSphere API is running" });
