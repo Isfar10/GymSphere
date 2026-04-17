@@ -4,6 +4,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Trainers from "./pages/Trainers";
+import Bookings from "./pages/Bookings";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -36,6 +37,15 @@ function App() {
         element={
           <ProtectedRoute>
             <Trainers />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/bookings"
+        element={
+          <ProtectedRoute>
+            <Bookings />
           </ProtectedRoute>
         }
       />
