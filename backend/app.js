@@ -5,11 +5,13 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
 app.use("/workout", workoutRoutes);
 
 app.get("/", (req, res) => {
@@ -19,5 +21,6 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 module.exports = app;
