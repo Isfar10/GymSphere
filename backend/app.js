@@ -6,6 +6,7 @@ const userRoutes = require("./routes/userRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const workoutRoutes = require("./routes/workoutRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const weeklyGoalRoutes = require("./routes/weeklyGoalRoutes");
 
 const app = express();
 
@@ -22,5 +23,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/weekly-goals", weeklyGoalRoutes);
 
 module.exports = app;
