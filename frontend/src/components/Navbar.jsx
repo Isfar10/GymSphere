@@ -75,6 +75,13 @@ const Navbar = () => {
             Weekly Goals
           </Link>
 
+
+          <Link to="/feedback" style={linkStyle("/feedback")}>
+            Feedback
+          </Link>
+
+
+
           <Link to="/profile" style={linkStyle("/profile")}>
             Profile
           </Link>

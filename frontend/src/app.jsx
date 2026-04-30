@@ -5,7 +5,12 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Trainers from "./pages/Trainers";
 import Bookings from "./pages/Bookings";
+
+import WeeklyGoals from "./pages/weeklyGoals";
+import Feedback from "./pages/Feedback";
+
 import WeeklyGoals from "./pages/WeeklyGoals";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -59,6 +64,18 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+
+      <Route
+        path="/feedback"
+        element={
+          <ProtectedRoute>
+            <Feedback />
+          </ProtectedRoute>
+        }
+      />
+
+
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
