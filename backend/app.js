@@ -8,6 +8,7 @@ const workoutRoutes = require("./routes/workoutRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const weeklyGoalRoutes = require("./routes/weeklyGoalRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
+const progressRoutes = require("./routes/progressRoutes");
 
 const app = express();
 
@@ -26,5 +27,6 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/weekly-goals", weeklyGoalRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/progress", progressRoutes);
 
 module.exports = app;
