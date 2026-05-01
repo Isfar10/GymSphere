@@ -67,6 +67,12 @@ const Navbar = () => {
             Trainers
           </Link>
 
+          {user?.role === "trainee" && (
+            <Link to="/trainer-matching" style={linkStyle("/trainer-matching")}>
+              Trainer Matching
+            </Link>
+          )}
+
           <Link to="/bookings" style={linkStyle("/bookings")}>
             Bookings
           </Link>
