@@ -1,15 +1,14 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Trainers from "./pages/Trainers";
 import Bookings from "./pages/Bookings";
-
 import WeeklyGoals from "./pages/weeklyGoals";
 import Feedback from "./pages/Feedback";
-
-import WeeklyGoals from "./pages/WeeklyGoals";
+import Progress from "./pages/Progress";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -17,7 +16,9 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
       <Route path="/login" element={<Login />} />
+
       <Route path="/register" element={<Register />} />
 
       <Route
@@ -65,6 +66,14 @@ function App() {
         }
       />
 
+      <Route
+        path="/progress"
+        element={
+          <ProtectedRoute>
+            <Progress />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/feedback"
@@ -74,8 +83,6 @@ function App() {
           </ProtectedRoute>
         }
       />
-
-
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

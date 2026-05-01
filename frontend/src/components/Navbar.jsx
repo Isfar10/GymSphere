@@ -20,87 +20,90 @@ const Navbar = () => {
   return (
     <nav
       style={{
+        padding: "16px 24px",
         borderBottom: "1px solid #ddd",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "16px",
+        flexWrap: "wrap",
         background: "#fff",
-        position: "sticky",
-        top: 0,
-        zIndex: 20,
       }}
     >
+      <Link
+        to="/dashboard"
+        style={{
+          textDecoration: "none",
+          color: "#111",
+          fontWeight: "bold",
+          fontSize: "22px",
+        }}
+      >
+        GymSphere
+      </Link>
+
       <div
         style={{
-          maxWidth: "1100px",
-          margin: "0 auto",
-          padding: "16px 24px",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
           gap: "16px",
+          alignItems: "center",
           flexWrap: "wrap",
         }}
       >
-        <Link
-          to="/dashboard"
-          style={{
-            textDecoration: "none",
-            color: "#111",
-            fontSize: "22px",
-            fontWeight: "bold",
-          }}
-        >
-          GymSphere
+        <Link style={linkStyle("/dashboard")} to="/dashboard">
+          Dashboard
         </Link>
 
-        <div
+        <Link style={linkStyle("/trainers")} to="/trainers">
+          Trainers
+        </Link>
+
+        <Link style={linkStyle("/bookings")} to="/bookings">
+          Bookings
+        </Link>
+
+        <Link style={linkStyle("/weekly-goals")} to="/weekly-goals">
+          Weekly Goals
+        </Link>
+
+        <Link style={linkStyle("/progress")} to="/progress">
+          Progress
+        </Link>
+
+        <Link style={linkStyle("/feedback")} to="/feedback">
+          Feedback
+        </Link>
+
+        <Link style={linkStyle("/profile")} to="/profile">
+          Profile
+        </Link>
+
+        {user && (
+          <span
+            style={{
+              padding: "6px 10px",
+              borderRadius: "999px",
+              background: "#f1f3f5",
+              textTransform: "capitalize",
+            }}
+          >
+            {user.role}
+          </span>
+        )}
+
+        <button
+          onClick={handleLogout}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "16px",
-            flexWrap: "wrap",
+            padding: "8px 12px",
+            border: "none",
+            borderRadius: "8px",
+            background: "#dc3545",
+            color: "#fff",
+            cursor: "pointer",
           }}
         >
-          <Link to="/dashboard" style={linkStyle("/dashboard")}>
-            Dashboard
-          </Link>
-
-          <Link to="/trainers" style={linkStyle("/trainers")}>
-            Trainers
-          </Link>
-
-          <Link to="/bookings" style={linkStyle("/bookings")}>
-            Bookings
-          </Link>
-
-          <Link to="/weekly-goals" style={linkStyle("/weekly-goals")}>
-            Weekly Goals
-          </Link>
-
-
-          <Link to="/feedback" style={linkStyle("/feedback")}>
-            Feedback
-          </Link>
-
-
-
-          <Link to="/profile" style={linkStyle("/profile")}>
-            Profile
-          </Link>
-
-          {user && (
-            <span
-              style={{
-                padding: "6px 10px",
-                borderRadius: "999px",
-                background: "#f3f3f3",
-                fontSize: "14px",
-              }}
-            >
-              {user.role}
-            </span>
-          )}
-
-          <button onClick={handleLogout}>Logout</button>
-        </div>
+          Logout
+        </button>
       </div>
     </nav>
   );
