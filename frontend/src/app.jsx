@@ -6,14 +6,12 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Trainers from "./pages/Trainers";
 import Bookings from "./pages/Bookings";
-import WeeklyGoals from "./pages/WeeklyGoals";
+import WeeklyGoals from "./pages/weeklyGoals";
 import Feedback from "./pages/Feedback";
-<<<<<<< Trainer-Matching-System
 import TrainerMatching from "./pages/TrainerMatching";
-=======
 import Progress from "./pages/Progress";
+import Notifications from "./pages/Notifications";
 
->>>>>>> main
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -53,15 +51,6 @@ function App() {
       />
 
       <Route
-        path="/trainer-matching"
-        element={
-          <ProtectedRoute>
-            <TrainerMatching />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
         path="/bookings"
         element={
           <ProtectedRoute>
@@ -84,6 +73,24 @@ function App() {
         element={
           <ProtectedRoute>
             <Progress />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/trainer-matching"
+        element={
+          <ProtectedRoute>
+            <TrainerMatching />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <Notifications />
           </ProtectedRoute>
         }
       />

@@ -1,5 +1,6 @@
 const ProgressLog = require("../models/ProgressLog");
 const User = require("../models/User");
+const createNotification = require("../utils/createNotification");
 
 const normalizeDate = (dateString) => {
   const baseDate = dateString ? new Date(dateString) : new Date();
@@ -37,20 +38,24 @@ const formatProgressLog = (log) => ({
 
 const buildSummary = (logs) => {
   const totalLogs = logs.length;
+
   const totalWorkoutMinutes = logs.reduce(
     (sum, log) => sum + Number(log.workoutMinutes || 0),
     0
   );
+
   const totalCaloriesBurned = logs.reduce(
     (sum, log) => sum + Number(log.caloriesBurned || 0),
     0
   );
+
   const totalWorkoutsCompleted = logs.reduce(
     (sum, log) => sum + Number(log.workoutsCompleted || 0),
     0
   );
 
   const scoredLogs = logs.filter((log) => Number(log.performanceScore || 0) > 0);
+
   const averagePerformanceScore =
     scoredLogs.length > 0
       ? Math.round(
@@ -115,23 +120,27 @@ const getMyProgressLogs = async (req, res) => {
 
       if (startDate) {
         const normalizedStartDate = normalizeDate(startDate);
+
         if (!normalizedStartDate) {
           return res.status(400).json({
             success: false,
             message: "Invalid startDate value",
           });
         }
+
         filter.date.$gte = normalizedStartDate;
       }
 
       if (endDate) {
         const normalizedEndDate = normalizeDate(endDate);
+
         if (!normalizedEndDate) {
           return res.status(400).json({
             success: false,
             message: "Invalid endDate value",
           });
         }
+
         filter.date.$lte = normalizedEndDate;
       }
     }
@@ -198,8 +207,7 @@ const createProgressLog = async (req, res) => {
     if (existingLog) {
       return res.status(400).json({
         success: false,
-        message:
-          "A progress log already exists for this date. Please edit it instead.",
+        message: "A progress log already exists for this date. Please edit it instead.",
       });
     }
 
@@ -218,6 +226,18 @@ const createProgressLog = async (req, res) => {
       "trainee",
       "name email"
     );
+
+    await createNotification({
+      user: currentUser._id,
+      title: "Progress logged",
+      message: `Your progress for ${normalizedDate} has been saved successfully.`,
+      type: "progress",
+      link: "/progress",
+      metadata: {
+        progressLogId: progressLog._id,
+        date: normalizedDate,
+      },
+    });
 
     return res.status(201).json({
       success: true,
