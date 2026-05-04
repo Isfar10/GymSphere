@@ -62,7 +62,7 @@ const Navbar = () => {
           Bookings
         </Link>
 
-<<<<<<< Trainer-Matching-System
+
           {user?.role === "trainee" && (
             <Link to="/trainer-matching" style={linkStyle("/trainer-matching")}>
               Trainer Matching
@@ -72,11 +72,11 @@ const Navbar = () => {
           <Link to="/bookings" style={linkStyle("/bookings")}>
             Bookings
           </Link>
-=======
+
         <Link style={linkStyle("/weekly-goals")} to="/weekly-goals">
           Weekly Goals
         </Link>
->>>>>>> main
+
 
         <Link style={linkStyle("/progress")} to="/progress">
           Progress

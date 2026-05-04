@@ -8,12 +8,12 @@ import Trainers from "./pages/Trainers";
 import Bookings from "./pages/Bookings";
 import WeeklyGoals from "./pages/WeeklyGoals";
 import Feedback from "./pages/Feedback";
-<<<<<<< Trainer-Matching-System
+
 import TrainerMatching from "./pages/TrainerMatching";
-=======
+
 import Progress from "./pages/Progress";
 
->>>>>>> main
+
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
