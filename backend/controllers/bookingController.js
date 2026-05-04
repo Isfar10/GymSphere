@@ -1,5 +1,6 @@
 const Booking = require("../models/Booking");
 const User = require("../models/User");
+const createNotification = require("../utils/createNotification");
 
 const formatBooking = (booking) => ({
   id: booking._id,
@@ -7,7 +8,7 @@ const formatBooking = (booking) => ({
     ? {
         id: booking.trainee._id,
         name: booking.trainee.name,
-        email: booking.trainee.email
+        email: booking.trainee.email,
       }
     : null,
   trainer: booking.trainer
@@ -15,7 +16,7 @@ const formatBooking = (booking) => ({
         id: booking.trainer._id,
         name: booking.trainer.name,
         email: booking.trainer.email,
-        hourlyRate: booking.trainer.hourlyRate
+        hourlyRate: booking.trainer.hourlyRate,
       }
     : null,
   sessionDate: booking.sessionDate,
@@ -26,7 +27,7 @@ const formatBooking = (booking) => ({
   price: booking.price,
   status: booking.status,
   createdAt: booking.createdAt,
-  updatedAt: booking.updatedAt
+  updatedAt: booking.updatedAt,
 });
 
 const createBooking = async (req, res) => {
@@ -36,7 +37,7 @@ const createBooking = async (req, res) => {
     if (!trainerId || !sessionDate || !day || !start || !end) {
       return res.status(400).json({
         success: false,
-        message: "trainerId, sessionDate, day, start, and end are required"
+        message: "trainerId, sessionDate, day, start, and end are required",
       });
     }
 
@@ -45,14 +46,14 @@ const createBooking = async (req, res) => {
     if (!trainee) {
       return res.status(404).json({
         success: false,
-        message: "Trainee not found"
+        message: "Trainee not found",
       });
     }
 
     if (trainee.role !== "trainee") {
       return res.status(403).json({
         success: false,
-        message: "Only trainees can create bookings"
+        message: "Only trainees can create bookings",
       });
     }
 
@@ -61,14 +62,14 @@ const createBooking = async (req, res) => {
     if (!trainer || trainer.role !== "trainer") {
       return res.status(404).json({
         success: false,
-        message: "Trainer not found"
+        message: "Trainer not found",
       });
     }
 
     if (!trainer.isProfileComplete) {
       return res.status(400).json({
         success: false,
-        message: "Trainer profile is not complete yet"
+        message: "Trainer profile is not complete yet",
       });
     }
 
@@ -82,7 +83,7 @@ const createBooking = async (req, res) => {
     if (!matchingAvailability) {
       return res.status(400).json({
         success: false,
-        message: "Selected slot is not available for this trainer"
+        message: "Selected slot is not available for this trainer",
       });
     }
 
@@ -92,13 +93,13 @@ const createBooking = async (req, res) => {
       day,
       start,
       end,
-      status: { $in: ["pending", "accepted"] }
+      status: { $in: ["pending", "accepted"] },
     });
 
     if (alreadyBooked) {
       return res.status(400).json({
         success: false,
-        message: "This slot is already booked"
+        message: "This slot is already booked",
       });
     }
 
@@ -110,22 +111,56 @@ const createBooking = async (req, res) => {
       start,
       end,
       notes: notes || "",
-      price: trainer.hourlyRate || 0
+      price: trainer.hourlyRate || 0,
     });
 
     const populatedBooking = await Booking.findById(booking._id)
       .populate("trainee", "name email")
       .populate("trainer", "name email hourlyRate");
 
+    await createNotification({
+      user: trainer._id,
+      title: "New booking request",
+      message: `${trainee.name} requested a session on ${sessionDate} from ${start} to ${end}.`,
+      type: "booking",
+      link: "/bookings",
+      metadata: {
+        bookingId: booking._id,
+        traineeId: trainee._id,
+        trainerId: trainer._id,
+        sessionDate,
+        day,
+        start,
+        end,
+      },
+    });
+
+    await createNotification({
+      user: trainee._id,
+      title: "Booking request sent",
+      message: `Your booking request with ${trainer.name} was created successfully.`,
+      type: "booking",
+      link: "/bookings",
+      metadata: {
+        bookingId: booking._id,
+        traineeId: trainee._id,
+        trainerId: trainer._id,
+        sessionDate,
+        day,
+        start,
+        end,
+      },
+    });
+
     return res.status(201).json({
       success: true,
       message: "Booking created successfully",
-      booking: formatBooking(populatedBooking)
+      booking: formatBooking(populatedBooking),
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -137,11 +172,11 @@ const getMyBookings = async (req, res) => {
     if (!currentUser) {
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: "User not found",
       });
     }
 
-    let query = {};
+    const query = {};
 
     if (currentUser.role === "trainee") {
       query.trainee = currentUser._id;
@@ -157,12 +192,12 @@ const getMyBookings = async (req, res) => {
     return res.status(200).json({
       success: true,
       count: bookings.length,
-      bookings: bookings.map(formatBooking)
+      bookings: bookings.map(formatBooking),
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -174,7 +209,7 @@ const getAllBookings = async (req, res) => {
     if (!currentUser || currentUser.role !== "admin") {
       return res.status(403).json({
         success: false,
-        message: "Only admins can view all bookings"
+        message: "Only admins can view all bookings",
       });
     }
 
@@ -186,12 +221,12 @@ const getAllBookings = async (req, res) => {
     return res.status(200).json({
       success: true,
       count: bookings.length,
-      bookings: bookings.map(formatBooking)
+      bookings: bookings.map(formatBooking),
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -203,7 +238,7 @@ const updateBookingStatus = async (req, res) => {
     if (!status) {
       return res.status(400).json({
         success: false,
-        message: "Status is required"
+        message: "Status is required",
       });
     }
 
@@ -214,7 +249,7 @@ const updateBookingStatus = async (req, res) => {
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: "Booking not found"
+        message: "Booking not found",
       });
     }
 
@@ -223,7 +258,7 @@ const updateBookingStatus = async (req, res) => {
     if (!currentUser) {
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: "User not found",
       });
     }
 
@@ -234,7 +269,7 @@ const updateBookingStatus = async (req, res) => {
       if (!isOwnBooking) {
         return res.status(403).json({
           success: false,
-          message: "You can only manage your own bookings"
+          message: "You can only manage your own bookings",
         });
       }
 
@@ -243,14 +278,14 @@ const updateBookingStatus = async (req, res) => {
       if (!allowedTrainerStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
-          message: "Trainer can only set accepted, rejected, or completed"
+          message: "Trainer can only set accepted, rejected, or completed",
         });
       }
 
       if (status === "completed" && booking.status !== "accepted") {
         return res.status(400).json({
           success: false,
-          message: "Only accepted bookings can be completed"
+          message: "Only accepted bookings can be completed",
         });
       }
     } else if (currentUser.role === "trainee") {
@@ -260,27 +295,27 @@ const updateBookingStatus = async (req, res) => {
       if (!isOwnBooking) {
         return res.status(403).json({
           success: false,
-          message: "You can only manage your own bookings"
+          message: "You can only manage your own bookings",
         });
       }
 
       if (status !== "cancelled") {
         return res.status(400).json({
           success: false,
-          message: "Trainee can only cancel bookings"
+          message: "Trainee can only cancel bookings",
         });
       }
 
       if (!["pending", "accepted"].includes(booking.status)) {
         return res.status(400).json({
           success: false,
-          message: "Only pending or accepted bookings can be cancelled"
+          message: "Only pending or accepted bookings can be cancelled",
         });
       }
     } else if (currentUser.role !== "admin") {
       return res.status(403).json({
         success: false,
-        message: "Not authorized"
+        message: "Not authorized",
       });
     }
 
@@ -291,15 +326,39 @@ const updateBookingStatus = async (req, res) => {
       .populate("trainee", "name email")
       .populate("trainer", "name email hourlyRate");
 
+    await createNotification({
+      user: updatedBooking.trainee._id,
+      title: "Booking status updated",
+      message: `Your session with ${updatedBooking.trainer.name} is now ${status}.`,
+      type: "booking",
+      link: "/bookings",
+      metadata: {
+        bookingId: updatedBooking._id,
+        status,
+      },
+    });
+
+    await createNotification({
+      user: updatedBooking.trainer._id,
+      title: "Booking status updated",
+      message: `The booking with ${updatedBooking.trainee.name} is now ${status}.`,
+      type: "booking",
+      link: "/bookings",
+      metadata: {
+        bookingId: updatedBooking._id,
+        status,
+      },
+    });
+
     return res.status(200).json({
       success: true,
       message: "Booking status updated successfully",
-      booking: formatBooking(updatedBooking)
+      booking: formatBooking(updatedBooking),
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -308,5 +367,5 @@ module.exports = {
   createBooking,
   getMyBookings,
   getAllBookings,
-  updateBookingStatus
+  updateBookingStatus,
 };

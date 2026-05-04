@@ -1,5 +1,6 @@
 const WeeklyGoal = require("../models/WeeklyGoal");
 const User = require("../models/User");
+const createNotification = require("../utils/createNotification");
 
 const getMondayOfWeek = (dateString) => {
   const baseDate = dateString ? new Date(dateString) : new Date();
@@ -96,9 +97,11 @@ const getMyWeeklyGoals = async (req, res) => {
         acc.totalGoals += 1;
         acc.totalTarget += goal.targetCount;
         acc.totalCompleted += goal.completedCount;
+
         if (goal.completedCount >= goal.targetCount) {
           acc.completedGoals += 1;
         }
+
         return acc;
       },
       {
@@ -186,6 +189,18 @@ const createWeeklyGoal = async (req, res) => {
       "name email"
     );
 
+    await createNotification({
+      user: currentUser._id,
+      title: "Weekly goal created",
+      message: `Your weekly goal "${title}" has been created. Keep going!`,
+      type: "weekly_goal",
+      link: "/weekly-goals",
+      metadata: {
+        goalId: goal._id,
+        weekStart: normalizedWeekStart,
+      },
+    });
+
     return res.status(201).json({
       success: true,
       message: "Weekly goal created successfully",
@@ -246,6 +261,7 @@ const updateWeeklyGoal = async (req, res) => {
 
     if (targetCount !== undefined) {
       goal.targetCount = Number(targetCount);
+
       if (goal.completedCount > goal.targetCount) {
         goal.completedCount = goal.targetCount;
       }
@@ -323,6 +339,8 @@ const updateWeeklyGoalProgress = async (req, res) => {
       });
     }
 
+    const wasCompleted = goal.completedCount >= goal.targetCount;
+
     if (completedCount !== undefined) {
       goal.completedCount = Number(completedCount);
     } else if (action === "increment") {
@@ -350,6 +368,23 @@ const updateWeeklyGoalProgress = async (req, res) => {
     }
 
     await goal.save();
+
+    const isNowCompleted = goal.completedCount >= goal.targetCount;
+
+    if (!wasCompleted && isNowCompleted) {
+      await createNotification({
+        user: currentUser._id,
+        title: "Weekly goal completed",
+        message: `Great job! You completed your weekly goal "${goal.title}".`,
+        type: "weekly_goal",
+        link: "/weekly-goals",
+        metadata: {
+          goalId: goal._id,
+          completedCount: goal.completedCount,
+          targetCount: goal.targetCount,
+        },
+      });
+    }
 
     const updatedGoal = await WeeklyGoal.findById(goal._id).populate(
       "trainee",
