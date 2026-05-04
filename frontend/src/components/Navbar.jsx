@@ -36,17 +36,34 @@ const Navbar = () => {
           Bookings
         </Link>
 
+
         {user?.role === "trainee" && (
           <Link to="/trainer-matching" style={linkStyle("/trainer-matching")}>
             Trainer Matching
           </Link>
         )}
 
+
+          {user?.role === "trainee" && (
+            <Link to="/trainer-matching" style={linkStyle("/trainer-matching")}>
+              Trainer Matching
+            </Link>
+          )}
+
+
         {user?.role === "trainee" && (
           <Link to="/weekly-goals" style={linkStyle("/weekly-goals")}>
             Weekly Goals
           </Link>
+
         )}
+
+
+        <Link style={linkStyle("/weekly-goals")} to="/weekly-goals">
+          Weekly Goals
+        </Link>
+
+
 
         {user?.role === "trainee" && (
           <Link to="/progress" style={linkStyle("/progress")}>

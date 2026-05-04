@@ -8,9 +8,19 @@ import Trainers from "./pages/Trainers";
 import Bookings from "./pages/Bookings";
 import WeeklyGoals from "./pages/weeklyGoals";
 import Feedback from "./pages/Feedback";
+
 import TrainerMatching from "./pages/TrainerMatching";
+
+
+import TrainerMatching from "./pages/TrainerMatching";
+
+
 import Progress from "./pages/Progress";
 import Notifications from "./pages/Notifications";
+
+
+
+
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
