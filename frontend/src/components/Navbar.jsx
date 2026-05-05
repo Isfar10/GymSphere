@@ -1,4 +1,4 @@
-```import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
@@ -13,13 +13,13 @@ const Navbar = () => {
 
   const linkStyle = (path) => ({
     textDecoration: "none",
-    color: location.pathname === path ? "#0d6efd" : "#222",
+    color: location.pathname === path ? "#16a34a" : "#222",
     fontWeight: location.pathname === path ? "bold" : "normal",
   });
 
   return (
     <nav style={styles.navbar}>
-      <Link to="/dashboard" style={styles.brand}>
+      <Link to="/dashboard" style={styles.logo}>
         GymSphere
       </Link>
 
@@ -36,27 +36,33 @@ const Navbar = () => {
           Bookings
         </Link>
 
+        <Link to="/weekly-goals" style={linkStyle("/weekly-goals")}>
+          Weekly Goals
+        </Link>
+
+        <Link to="/progress" style={linkStyle("/progress")}>
+          Progress
+        </Link>
+
+        <Link to="/social-feed" style={linkStyle("/social-feed")}>
+          Social Feed
+        </Link>
+
         {user?.role === "trainee" && (
           <Link to="/trainer-matching" style={linkStyle("/trainer-matching")}>
             Trainer Matching
           </Link>
         )}
 
-        {user?.role === "trainee" && (
-          <Link to="/weekly-goals" style={linkStyle("/weekly-goals")}>
-            Weekly Goals
-          </Link>
-        )}
-
-        {user?.role === "trainee" && (
-          <Link to="/progress" style={linkStyle("/progress")}>
-            Progress
-          </Link>
-        )}
-
         <Link to="/notifications" style={linkStyle("/notifications")}>
           Notifications
         </Link>
+
+        {user?.role === "admin" && (
+          <Link to="/admin-analytics" style={linkStyle("/admin-analytics")}>
+            Admin Analytics
+          </Link>
+        )}
 
         <Link to="/feedback" style={linkStyle("/feedback")}>
           Feedback
@@ -65,7 +71,9 @@ const Navbar = () => {
         <Link to="/profile" style={linkStyle("/profile")}>
           Profile
         </Link>
+      </div>
 
+      <div style={styles.rightSide}>
         {user && <span style={styles.roleBadge}>{user.role}</span>}
 
         <button type="button" onClick={handleLogout} style={styles.logoutButton}>
@@ -79,42 +87,55 @@ const Navbar = () => {
 const styles = {
   navbar: {
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
-    gap: "20px",
+    justifyContent: "space-between",
+    gap: "18px",
     padding: "16px 24px",
+    borderBottom: "1px solid #e5e7eb",
     background: "#ffffff",
-    boxShadow: "0 2px 12px rgba(0, 0, 0, 0.08)",
-    flexWrap: "wrap",
+    fontFamily:
+      "Inter, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+    position: "sticky",
+    top: 0,
+    zIndex: 20,
   },
-  brand: {
-    fontSize: "24px",
-    fontWeight: "bold",
-    color: "#0d6efd",
+  logo: {
     textDecoration: "none",
+    color: "#16a34a",
+    fontSize: "22px",
+    fontWeight: 900,
+    whiteSpace: "nowrap",
   },
   links: {
     display: "flex",
     alignItems: "center",
-    gap: "16px",
+    gap: "14px",
     flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  rightSide: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
   },
   roleBadge: {
-    background: "#eef4ff",
-    color: "#0d6efd",
-    padding: "6px 10px",
     borderRadius: "999px",
-    fontSize: "13px",
+    background: "#ecfdf5",
+    color: "#166534",
+    padding: "6px 10px",
     textTransform: "capitalize",
+    fontSize: "13px",
+    fontWeight: 800,
   },
   logoutButton: {
     border: "none",
-    background: "#dc3545",
-    color: "#fff",
-    padding: "8px 12px",
-    borderRadius: "8px",
+    background: "#111827",
+    color: "#ffffff",
+    borderRadius: "999px",
+    padding: "9px 14px",
     cursor: "pointer",
+    fontWeight: 800,
   },
 };
 
-export default Navbar;```
+export default Navbar;
