@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+```import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
@@ -19,13 +19,18 @@ const Navbar = () => {
 
   return (
     <nav style={styles.navbar}>
+
       <Link to="/dashboard" style={styles.logo}>
+
+      <Link to="/dashboard" style={styles.brand}>
+
         GymSphere
       </Link>
 
       <div style={styles.links}>
         <Link to="/dashboard" style={linkStyle("/dashboard")}>
           Dashboard
+
         </Link>
 
         <Link to="/trainers" style={linkStyle("/trainers")}>
@@ -36,9 +41,29 @@ const Navbar = () => {
           Bookings
         </Link>
 
+        </Link>
+
+        <Link to="/trainers" style={linkStyle("/trainers")}>
+          Trainers
+        </Link>
+
+        <Link to="/bookings" style={linkStyle("/bookings")}>
+          Bookings
+        </Link>
+
+
+        {user?.role === "trainee" && (
+          <Link to="/trainer-matching" style={linkStyle("/trainer-matching")}>
+            Trainer Matching
+          </Link>
+        )}
+
+
+
         <Link to="/weekly-goals" style={linkStyle("/weekly-goals")}>
           Weekly Goals
         </Link>
+
 
         <Link to="/progress" style={linkStyle("/progress")}>
           Progress
@@ -70,6 +95,43 @@ const Navbar = () => {
       <div style={styles.rightSide}>
         {user && <span style={styles.roleBadge}>{user.role}</span>}
 
+
+
+        {user?.role === "trainee" && (
+          <Link to="/weekly-goals" style={linkStyle("/weekly-goals")}>
+            Weekly Goals
+          </Link>
+
+        )}
+
+
+        <Link style={linkStyle("/weekly-goals")} to="/weekly-goals">
+          Weekly Goals
+        </Link>
+
+
+
+        {user?.role === "trainee" && (
+          <Link to="/progress" style={linkStyle("/progress")}>
+            Progress
+          </Link>
+        )}
+
+        <Link to="/notifications" style={linkStyle("/notifications")}>
+          Notifications
+        </Link>
+
+        <Link to="/feedback" style={linkStyle("/feedback")}>
+          Feedback
+        </Link>
+
+        <Link to="/profile" style={linkStyle("/profile")}>
+          Profile
+        </Link>
+
+        {user && <span style={styles.roleBadge}>{user.role}</span>}
+
+
         <button type="button" onClick={handleLogout} style={styles.logoutButton}>
           Logout
         </button>
@@ -81,6 +143,7 @@ const Navbar = () => {
 const styles = {
   navbar: {
     display: "flex",
+
     alignItems: "center",
     justifyContent: "space-between",
     gap: "18px",
@@ -99,10 +162,26 @@ const styles = {
     fontSize: "22px",
     fontWeight: 900,
     whiteSpace: "nowrap",
+
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "20px",
+    padding: "16px 24px",
+    background: "#ffffff",
+    boxShadow: "0 2px 12px rgba(0, 0, 0, 0.08)",
+    flexWrap: "wrap",
+  },
+  brand: {
+    fontSize: "24px",
+    fontWeight: "bold",
+    color: "#0d6efd",
+    textDecoration: "none",
+
   },
   links: {
     display: "flex",
     alignItems: "center",
+
     gap: "14px",
     flexWrap: "wrap",
     justifyContent: "center",
@@ -133,3 +212,26 @@ const styles = {
 };
 
 export default Navbar;
+
+    gap: "16px",
+    flexWrap: "wrap",
+  },
+  roleBadge: {
+    background: "#eef4ff",
+    color: "#0d6efd",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    fontSize: "13px",
+    textTransform: "capitalize",
+  },
+  logoutButton: {
+    border: "none",
+    background: "#dc3545",
+    color: "#fff",
+    padding: "8px 12px",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+};
+
+export default Navbar;```

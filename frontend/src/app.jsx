@@ -6,12 +6,27 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Trainers from "./pages/Trainers";
 import Bookings from "./pages/Bookings";
-import WeeklyGoals from "./pages/WeeklyGoals";
+import WeeklyGoals from "./pages/weeklyGoals";
 import Feedback from "./pages/Feedback";
+
 import TrainerMatching from "./pages/TrainerMatching";
+
 import Progress from "./pages/Progress";
 import Notifications from "./pages/Notifications";
 import SocialFeed from "./pages/SocialFeed";
+
+
+
+import TrainerMatching from "./pages/TrainerMatching";
+
+
+import Progress from "./pages/Progress";
+import Notifications from "./pages/Notifications";
+
+
+
+
+
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -53,6 +68,7 @@ function App() {
 
       <Route
         path="/bookings"
+
         element={
           <ProtectedRoute>
             <Bookings />
@@ -80,6 +96,47 @@ function App() {
 
       <Route
         path="/trainer-matching"
+
+        element={
+          <ProtectedRoute>
+            <Bookings />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <Notifications />
+
+        path="/weekly-goals"
+        element={
+          <ProtectedRoute>
+            <WeeklyGoals />
+
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+
+        path="/social-feed"
+        element={
+          <ProtectedRoute>
+            <SocialFeed />
+
+        path="/progress"
+        element={
+          <ProtectedRoute>
+            <Progress />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/trainer-matching"
         element={
           <ProtectedRoute>
             <TrainerMatching />
@@ -92,15 +149,7 @@ function App() {
         element={
           <ProtectedRoute>
             <Notifications />
-          </ProtectedRoute>
-        }
-      />
 
-      <Route
-        path="/social-feed"
-        element={
-          <ProtectedRoute>
-            <SocialFeed />
           </ProtectedRoute>
         }
       />
