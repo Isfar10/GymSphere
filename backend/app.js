@@ -16,11 +16,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use("/workout", workoutRoutes);
-
 app.get("/", (req, res) => {
   res.json({ message: "GymSphere API is running" });
 });
+
+app.use("/workout", workoutRoutes);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
