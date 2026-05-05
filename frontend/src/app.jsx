@@ -6,7 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Trainers from "./pages/Trainers";
 import Bookings from "./pages/Bookings";
-import WeeklyGoals from "./pages/weeklyGoals";
+import WeeklyGoals from "./pages/WeeklyGoals";
 import Feedback from "./pages/Feedback";
 
 import TrainerMatching from "./pages/TrainerMatching";
@@ -22,6 +22,8 @@ import TrainerMatching from "./pages/TrainerMatching";
 
 import Progress from "./pages/Progress";
 import Notifications from "./pages/Notifications";
+import SocialFeed from "./pages/SocialFeed";
+import AdminAnalytics from "./pages/AdminAnalytics";
 
 
 
@@ -150,6 +152,24 @@ function App() {
           <ProtectedRoute>
             <Notifications />
 
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/social-feed"
+        element={
+          <ProtectedRoute>
+            <SocialFeed />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin-analytics"
+        element={
+          <ProtectedRoute>
+            <AdminAnalytics />
           </ProtectedRoute>
         }
       />

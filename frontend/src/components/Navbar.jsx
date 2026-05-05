@@ -1,4 +1,4 @@
-```import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
@@ -22,7 +22,11 @@ const Navbar = () => {
 
       <Link to="/dashboard" style={styles.logo}>
 
+
+      <Link to="/dashboard" style={styles.logo}>
+
       <Link to="/dashboard" style={styles.brand}>
+
 
         GymSphere
       </Link>
@@ -40,6 +44,12 @@ const Navbar = () => {
         <Link to="/bookings" style={linkStyle("/bookings")}>
           Bookings
         </Link>
+
+
+        <Link to="/weekly-goals" style={linkStyle("/weekly-goals")}>
+          Weekly Goals
+        </Link>
+
 
         </Link>
 
@@ -105,6 +115,7 @@ const Navbar = () => {
         )}
 
 
+
         <Link style={linkStyle("/weekly-goals")} to="/weekly-goals">
           Weekly Goals
         </Link>
@@ -112,14 +123,20 @@ const Navbar = () => {
 
 
         {user?.role === "trainee" && (
-          <Link to="/progress" style={linkStyle("/progress")}>
-            Progress
+          <Link to="/trainer-matching" style={linkStyle("/trainer-matching")}>
+            Trainer Matching
           </Link>
         )}
 
         <Link to="/notifications" style={linkStyle("/notifications")}>
           Notifications
         </Link>
+
+        {user?.role === "admin" && (
+          <Link to="/admin-analytics" style={linkStyle("/admin-analytics")}>
+            Admin Analytics
+          </Link>
+        )}
 
         <Link to="/feedback" style={linkStyle("/feedback")}>
           Feedback
@@ -128,7 +145,9 @@ const Navbar = () => {
         <Link to="/profile" style={linkStyle("/profile")}>
           Profile
         </Link>
+      </div>
 
+      <div style={styles.rightSide}>
         {user && <span style={styles.roleBadge}>{user.role}</span>}
 
 
@@ -143,6 +162,8 @@ const Navbar = () => {
 const styles = {
   navbar: {
     display: "flex",
+
+
 
     alignItems: "center",
     justifyContent: "space-between",
@@ -164,23 +185,36 @@ const styles = {
     whiteSpace: "nowrap",
 
     justifyContent: "space-between",
+
     alignItems: "center",
-    gap: "20px",
+    justifyContent: "space-between",
+    gap: "18px",
     padding: "16px 24px",
+    borderBottom: "1px solid #e5e7eb",
     background: "#ffffff",
-    boxShadow: "0 2px 12px rgba(0, 0, 0, 0.08)",
-    flexWrap: "wrap",
+    fontFamily:
+      "Inter, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+    position: "sticky",
+    top: 0,
+    zIndex: 20,
   },
-  brand: {
-    fontSize: "24px",
-    fontWeight: "bold",
-    color: "#0d6efd",
+  logo: {
     textDecoration: "none",
+
+    color: "#16a34a",
+    fontSize: "22px",
+    fontWeight: 900,
+    whiteSpace: "nowrap",
+
+
 
   },
   links: {
     display: "flex",
     alignItems: "center",
+
+    gap: "14px",
+
 
     gap: "14px",
     flexWrap: "wrap",
@@ -214,24 +248,37 @@ const styles = {
 export default Navbar;
 
     gap: "16px",
+
     flexWrap: "wrap",
+    justifyContent: "center",
+  },
+  rightSide: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
   },
   roleBadge: {
-    background: "#eef4ff",
-    color: "#0d6efd",
-    padding: "6px 10px",
     borderRadius: "999px",
-    fontSize: "13px",
+    background: "#ecfdf5",
+    color: "#166534",
+    padding: "6px 10px",
     textTransform: "capitalize",
+    fontSize: "13px",
+    fontWeight: 800,
   },
   logoutButton: {
     border: "none",
-    background: "#dc3545",
-    color: "#fff",
-    padding: "8px 12px",
-    borderRadius: "8px",
+    background: "#111827",
+    color: "#ffffff",
+    borderRadius: "999px",
+    padding: "9px 14px",
     cursor: "pointer",
+    fontWeight: 800,
   },
 };
 
+
+export default Navbar;
+
 export default Navbar;```
+

@@ -10,6 +10,8 @@ const weeklyGoalRoutes = require("./routes/weeklyGoalRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const progressRoutes = require("./routes/progressRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const socialPostRoutes = require("./routes/socialPostRoutes");
+const adminAnalyticsRoutes = require("./routes/adminAnalyticsRoutes");
 
 const socialPostRoutes = require("./routes/socialPostRoutes");
 
@@ -33,6 +35,8 @@ app.use("/api/weekly-goals", weeklyGoalRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/social-feed", socialPostRoutes);
+app.use("/api/admin/analytics", adminAnalyticsRoutes);
 
 app.use("/api/social-feed", socialPostRoutes);
 
