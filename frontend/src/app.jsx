@@ -1,4 +1,4 @@
-```import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -8,11 +8,27 @@ import Trainers from "./pages/Trainers";
 import Bookings from "./pages/Bookings";
 import WeeklyGoals from "./pages/WeeklyGoals";
 import Feedback from "./pages/Feedback";
+
 import TrainerMatching from "./pages/TrainerMatching";
+
+import Progress from "./pages/Progress";
+import Notifications from "./pages/Notifications";
+import SocialFeed from "./pages/SocialFeed";
+
+
+
+import TrainerMatching from "./pages/TrainerMatching";
+
+
 import Progress from "./pages/Progress";
 import Notifications from "./pages/Notifications";
 import SocialFeed from "./pages/SocialFeed";
 import AdminAnalytics from "./pages/AdminAnalytics";
+
+
+
+
+
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -54,6 +70,7 @@ function App() {
 
       <Route
         path="/bookings"
+
         element={
           <ProtectedRoute>
             <Bookings />
@@ -81,6 +98,47 @@ function App() {
 
       <Route
         path="/trainer-matching"
+
+        element={
+          <ProtectedRoute>
+            <Bookings />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <Notifications />
+
+        path="/weekly-goals"
+        element={
+          <ProtectedRoute>
+            <WeeklyGoals />
+
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+
+        path="/social-feed"
+        element={
+          <ProtectedRoute>
+            <SocialFeed />
+
+        path="/progress"
+        element={
+          <ProtectedRoute>
+            <Progress />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/trainer-matching"
         element={
           <ProtectedRoute>
             <TrainerMatching />
@@ -93,6 +151,7 @@ function App() {
         element={
           <ProtectedRoute>
             <Notifications />
+
           </ProtectedRoute>
         }
       />
@@ -129,4 +188,4 @@ function App() {
   );
 }
 
-export default App;```
+export default App;
