@@ -9,6 +9,10 @@ import Bookings from "./pages/Bookings";
 import WeeklyGoals from "./pages/WeeklyGoals";
 import Feedback from "./pages/Feedback";
 import TrainerMatching from "./pages/TrainerMatching";
+import Progress from "./pages/Progress";
+import Notifications from "./pages/Notifications";
+import SocialFeed from "./pages/SocialFeed";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -48,15 +52,6 @@ function App() {
       />
 
       <Route
-        path="/trainer-matching"
-        element={
-          <ProtectedRoute>
-            <TrainerMatching />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
         path="/bookings"
         element={
           <ProtectedRoute>
@@ -70,6 +65,42 @@ function App() {
         element={
           <ProtectedRoute>
             <WeeklyGoals />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/progress"
+        element={
+          <ProtectedRoute>
+            <Progress />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/trainer-matching"
+        element={
+          <ProtectedRoute>
+            <TrainerMatching />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <Notifications />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/social-feed"
+        element={
+          <ProtectedRoute>
+            <SocialFeed />
           </ProtectedRoute>
         }
       />
