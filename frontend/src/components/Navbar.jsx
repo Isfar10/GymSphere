@@ -2,20 +2,76 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const navItems = [
-  { label: "Dashboard", path: "/dashboard", roles: ["admin", "trainer", "trainee"] },
-  { label: "Trainers", path: "/trainers", roles: ["admin", "trainer", "trainee"] },
-  { label: "Bookings", path: "/bookings", roles: ["admin", "trainer", "trainee"] },
-  { label: "Weekly Goals", path: "/weekly-goals", roles: ["admin", "trainer", "trainee"] },
-  { label: "Progress", path: "/progress", roles: ["admin", "trainer", "trainee"] },
-  { label: "Diet Plans", path: "/diet-plans", roles: ["admin", "trainer", "trainee"] },
-  { label: "Memberships", path: "/memberships", roles: ["admin", "trainer", "trainee"] },
-  { label: "bKash", path: "/manual-bkash-payments", roles: ["admin", "trainer", "trainee"] },
-  { label: "Social Feed", path: "/social-feed", roles: ["admin", "trainer", "trainee"] },
-  { label: "Matching", path: "/trainer-matching", roles: ["trainee"] },
-  { label: "Notifications", path: "/notifications", roles: ["admin", "trainer", "trainee"] },
-  { label: "Analytics", path: "/admin-analytics", roles: ["admin"] },
-  { label: "Feedback", path: "/feedback", roles: ["admin", "trainer", "trainee"] },
-  { label: "Profile", path: "/profile", roles: ["admin", "trainer", "trainee"] },
+  {
+    label: "Dashboard",
+    path: "/dashboard",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "Trainers",
+    path: "/trainers",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "Bookings",
+    path: "/bookings",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "Weekly Goals",
+    path: "/weekly-goals",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "Progress",
+    path: "/progress",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "Diet Plans",
+    path: "/diet-plans",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "Memberships",
+    path: "/memberships",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "bKash",
+    path: "/manual-bkash-payments",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "Social Feed",
+    path: "/social-feed",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "Matching",
+    path: "/trainer-matching",
+    roles: ["trainee"],
+  },
+  {
+    label: "Notifications",
+    path: "/notifications",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "Analytics",
+    path: "/admin-analytics",
+    roles: ["admin"],
+  },
+  {
+    label: "Feedback",
+    path: "/feedback",
+    roles: ["admin", "trainer", "trainee"],
+  },
+  {
+    label: "Profile",
+    path: "/profile",
+    roles: ["admin", "trainer", "trainee"],
+  },
 ];
 
 function Navbar() {
@@ -63,7 +119,9 @@ function Navbar() {
         <div style={styles.right}>
           {user && (
             <div style={styles.userChip}>
-              <span style={styles.avatar}>{user.name?.[0]?.toUpperCase() || "U"}</span>
+              <span style={styles.avatar}>
+                {user.name?.[0]?.toUpperCase() || "U"}
+              </span>
               <span style={styles.userMeta}>
                 <strong>{user.name || "User"}</strong>
                 <small>{role}</small>

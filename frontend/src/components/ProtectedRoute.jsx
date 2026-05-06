@@ -11,7 +11,8 @@ const ProtectedRoute = ({ children }) => {
           minHeight: "100vh",
           display: "grid",
           placeItems: "center",
-          background: "#f8fafc",
+          background:
+            "radial-gradient(circle at top left, rgba(187,247,208,0.65), transparent 28rem), linear-gradient(135deg, #f8fafc 0%, #ffffff 48%, #ecfdf5 100%)",
           color: "#0f172a",
           fontFamily:
             "Inter, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",

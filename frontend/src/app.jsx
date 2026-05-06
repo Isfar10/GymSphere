@@ -10,7 +10,6 @@ import WeeklyGoals from "./pages/weeklyGoals";
 import Feedback from "./pages/Feedback";
 import TrainerMatching from "./pages/TrainerMatching";
 import Progress from "./pages/Progress";
-
 import Notifications from "./pages/Notifications";
 import SocialFeed from "./pages/SocialFeed";
 import AdminAnalytics from "./pages/AdminAnalytics";
