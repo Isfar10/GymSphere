@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
@@ -23,14 +24,12 @@ function Memberships() {
   const [allSubscriptions, setAllSubscriptions] = useState([]);
   const [planForm, setPlanForm] = useState(emptyPlanForm);
   const [editingPlanId, setEditingPlanId] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("mock");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const isAdmin = user?.role === "admin";
-
   const activePlanId = currentSubscription?.plan?.id;
 
   const totalRevenue = useMemo(() => {
@@ -63,10 +62,11 @@ function Memberships() {
       setHistory(historyResponse.data.subscriptions || []);
 
       if (isAdmin) {
-        const [adminPlansResponse, allSubscriptionsResponse] = await Promise.all([
-          API.get("/memberships/plans/admin"),
-          API.get("/memberships/admin/subscriptions"),
-        ]);
+        const [adminPlansResponse, allSubscriptionsResponse] =
+          await Promise.all([
+            API.get("/memberships/plans/admin"),
+            API.get("/memberships/admin/subscriptions"),
+          ]);
 
         setAdminPlans(adminPlansResponse.data.plans || []);
         setAllSubscriptions(allSubscriptionsResponse.data.subscriptions || []);
@@ -104,25 +104,6 @@ function Memberships() {
 
     const diff = new Date(endDate).getTime() - new Date().getTime();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  };
-
-  const handleSubscribe = async (planId) => {
-    try {
-      setActionLoading(true);
-      setError("");
-
-      await API.post("/memberships/subscribe", {
-        planId,
-        paymentMethod,
-      });
-
-      await fetchMembershipData();
-      showSuccess("Membership activated successfully.");
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to subscribe to plan.");
-    } finally {
-      setActionLoading(false);
-    }
   };
 
   const handleCancelSubscription = async () => {
@@ -254,8 +235,8 @@ function Memberships() {
             <p style={styles.eyebrow}>GymSphere Plans</p>
             <h1 style={styles.title}>Membership Subscriptions</h1>
             <p style={styles.subtitle}>
-              Choose a membership plan, unlock premium benefits, and manage your
-              active subscription.
+              Choose a membership plan, pay through manual bKash verification,
+              and manage your active subscription.
             </p>
           </div>
 
@@ -285,8 +266,10 @@ function Memberships() {
                       {currentSubscription.plan?.name} Plan
                     </h2>
                     <p style={styles.currentText}>
-                      Status: <strong>{currentSubscription.status}</strong> • Ends on{" "}
-                      <strong>{formatDate(currentSubscription.endDate)}</strong> •{" "}
+                      Status: <strong>{currentSubscription.status}</strong> •
+                      Ends on{" "}
+                      <strong>{formatDate(currentSubscription.endDate)}</strong>{" "}
+                      •{" "}
                       <strong>
                         {getDaysLeft(currentSubscription.endDate)} days left
                       </strong>
@@ -296,7 +279,8 @@ function Memberships() {
                   <>
                     <h2 style={styles.currentTitle}>No active membership</h2>
                     <p style={styles.currentText}>
-                      Subscribe to a plan to activate membership benefits.
+                      Select a plan and submit your bKash transaction ID for
+                      admin approval.
                     </p>
                   </>
                 )}
@@ -314,27 +298,20 @@ function Memberships() {
               )}
             </section>
 
-            <section style={styles.paymentBox}>
-              <label style={styles.label}>
-                Payment Method
-                <select
-                  value={paymentMethod}
-                  onChange={(event) => setPaymentMethod(event.target.value)}
-                  style={styles.input}
-                >
-                  <option value="mock">Mock Payment</option>
-                  <option value="cash">Cash</option>
-                  <option value="card">Card</option>
-                  <option value="bkash">bKash</option>
-                  <option value="nagad">Nagad</option>
-                  <option value="sslcommerz">SSLCommerz</option>
-                </select>
-              </label>
+            <section style={styles.paymentNotice}>
+              <div>
+                <h2 style={styles.noticeTitle}>Manual bKash Payment</h2>
+                <p style={styles.noticeText}>
+                  Since no bKash merchant account is connected, GymSphere uses
+                  manual bKash verification. Send payment to the displayed
+                  bKash number, submit your transaction ID, and wait for admin
+                  approval.
+                </p>
+              </div>
 
-              <p style={styles.helperText}>
-                This uses mock paid subscriptions now. You can connect real online
-                payment later.
-              </p>
+              <Link to="/manual-bkash-payments" style={styles.primaryLinkButton}>
+                Go to bKash Payment
+              </Link>
             </section>
 
             <section style={styles.planGrid}>
@@ -362,8 +339,12 @@ function Memberships() {
                     <p style={styles.planDescription}>{plan.description}</p>
 
                     <div style={styles.priceRow}>
-                      <span style={styles.price}>{formatCurrency(plan.price)}</span>
-                      <span style={styles.duration}>/{plan.durationDays} days</span>
+                      <span style={styles.price}>
+                        {formatCurrency(plan.price)}
+                      </span>
+                      <span style={styles.duration}>
+                        /{plan.durationDays} days
+                      </span>
                     </div>
 
                     <ul style={styles.featureList}>
@@ -374,17 +355,25 @@ function Memberships() {
                       ))}
                     </ul>
 
-                    <button
-                      type="button"
-                      onClick={() => handleSubscribe(plan.id)}
-                      disabled={actionLoading || activePlanId === plan.id}
-                      style={{
-                        ...styles.primaryButton,
-                        ...(activePlanId === plan.id ? styles.disabledButton : {}),
-                      }}
-                    >
-                      {activePlanId === plan.id ? "Current Plan" : "Subscribe"}
-                    </button>
+                    {activePlanId === plan.id ? (
+                      <button
+                        type="button"
+                        disabled
+                        style={{
+                          ...styles.primaryButton,
+                          ...styles.disabledButton,
+                        }}
+                      >
+                        Current Plan
+                      </button>
+                    ) : (
+                      <Link
+                        to="/manual-bkash-payments"
+                        style={styles.primaryLinkButton}
+                      >
+                        Pay with bKash
+                      </Link>
+                    )}
                   </article>
                 ))
               )}
@@ -414,7 +403,9 @@ function Memberships() {
                         <tr key={subscription.id}>
                           <td style={styles.td}>{subscription.plan?.name}</td>
                           <td style={styles.td}>{subscription.status}</td>
-                          <td style={styles.td}>{subscription.paymentStatus}</td>
+                          <td style={styles.td}>
+                            {subscription.paymentStatus}
+                          </td>
                           <td style={styles.td}>
                             {formatCurrency(subscription.amountPaid)}
                           </td>
@@ -451,9 +442,18 @@ function Memberships() {
                 </div>
 
                 <div style={styles.adminStats}>
-                  <StatBox label="Total Subscriptions" value={allSubscriptions.length} />
-                  <StatBox label="Active Subscriptions" value={activeSubscriptionCount} />
-                  <StatBox label="Membership Revenue" value={formatCurrency(totalRevenue)} />
+                  <StatBox
+                    label="Total Subscriptions"
+                    value={allSubscriptions.length}
+                  />
+                  <StatBox
+                    label="Active Subscriptions"
+                    value={activeSubscriptionCount}
+                  />
+                  <StatBox
+                    label="Membership Revenue"
+                    value={formatCurrency(totalRevenue)}
+                  />
                 </div>
 
                 <form onSubmit={handleSavePlan} style={styles.formCard}>
@@ -520,7 +520,9 @@ function Memberships() {
                       onChange={handlePlanFormChange}
                       style={styles.textarea}
                       rows="5"
-                      placeholder={"Priority trainer booking\nAdvanced progress insights"}
+                      placeholder={
+                        "Priority trainer booking\nAdvanced progress insights"
+                      }
                     />
                   </label>
 
@@ -575,8 +577,8 @@ function Memberships() {
                       <div>
                         <h4 style={styles.adminPlanTitle}>{plan.name}</h4>
                         <p style={styles.adminPlanText}>
-                          {formatCurrency(plan.price)} • {plan.durationDays} days •{" "}
-                          {plan.isActive ? "Active" : "Inactive"}
+                          {formatCurrency(plan.price)} • {plan.durationDays}{" "}
+                          days • {plan.isActive ? "Active" : "Inactive"}
                         </p>
                       </div>
 
@@ -630,12 +632,16 @@ function Memberships() {
                               <br />
                               <small>{subscription.user?.email}</small>
                             </td>
-                            <td style={styles.td}>{subscription.plan?.name}</td>
+                            <td style={styles.td}>
+                              {subscription.plan?.name}
+                            </td>
                             <td style={styles.td}>{subscription.status}</td>
                             <td style={styles.td}>
                               {formatCurrency(subscription.amountPaid)}
                             </td>
-                            <td style={styles.td}>{subscription.paymentMethod}</td>
+                            <td style={styles.td}>
+                              {subscription.paymentMethod}
+                            </td>
                             <td style={styles.td}>
                               {formatDate(subscription.endDate)}
                             </td>
@@ -766,19 +772,26 @@ const styles = {
     color: "#374151",
     lineHeight: 1.6,
   },
-  paymentBox: {
-    border: "1px solid #e5e7eb",
-    borderRadius: "18px",
-    padding: "16px",
-    background: "#f9fafb",
+  paymentNotice: {
+    border: "1px solid #bbf7d0",
+    borderRadius: "20px",
+    padding: "18px",
+    background: "#f0fdf4",
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "18px",
+    alignItems: "center",
     marginBottom: "20px",
-    display: "grid",
-    gap: "8px",
   },
-  helperText: {
+  noticeTitle: {
+    margin: "0 0 8px",
+    fontSize: "22px",
+    color: "#166534",
+  },
+  noticeText: {
     margin: 0,
-    color: "#6b7280",
-    fontSize: "14px",
+    color: "#166534",
+    lineHeight: 1.6,
   },
   planGrid: {
     display: "grid",
@@ -848,6 +861,18 @@ const styles = {
     padding: "11px 17px",
     fontWeight: 900,
     cursor: "pointer",
+  },
+  primaryLinkButton: {
+    display: "inline-block",
+    textDecoration: "none",
+    border: "none",
+    borderRadius: "999px",
+    background: "#16a34a",
+    color: "#ffffff",
+    padding: "11px 17px",
+    fontWeight: 900,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
   },
   secondaryButton: {
     border: "1px solid #16a34a",

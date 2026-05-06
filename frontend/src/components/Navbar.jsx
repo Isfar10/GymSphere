@@ -47,6 +47,10 @@ const Navbar = () => {
         <Link to="/memberships" style={linkStyle("/memberships")}>
           Memberships
         </Link>
+        
+        <Link to="/diet-plans" style={linkStyle("/diet-plans")}>
+          Diet Plans
+        </Link>
 
 
         <Link

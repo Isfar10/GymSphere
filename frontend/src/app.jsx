@@ -16,7 +16,7 @@ import AdminAnalytics from "./pages/AdminAnalytics";
 import Memberships from "./pages/Memberships";
 
 import ManualBkashPayments from "./pages/ManualBkashPayments";
-
+import DietPlans from "./pages/DietPlans";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -137,6 +137,15 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/diet-plans"
+        element={
+          <ProtectedRoute>
+            <DietPlans />
+          </ProtectedRoute>
+        }
+      />
+      
 
       <Route
 

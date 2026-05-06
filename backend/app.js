@@ -15,7 +15,7 @@ const adminAnalyticsRoutes = require("./routes/adminAnalyticsRoutes");
 const membershipRoutes = require("./routes/membershipRoutes");
 
 const manualBkashPaymentRoutes = require("./routes/manualBkashPaymentRoutes");
-
+const dietPlanRoutes = require("./routes/dietPlanRoutes");
 const app = express();
 
 app.use(cors());
@@ -40,6 +40,6 @@ app.use("/api/admin/analytics", adminAnalyticsRoutes);
 app.use("/api/memberships", membershipRoutes);
 
 app.use("/api/manual-bkash-payments", manualBkashPaymentRoutes);
-
+app.use("/api/diet-plans", dietPlanRoutes);
 
 module.exports = app;
