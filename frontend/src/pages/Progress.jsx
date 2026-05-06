@@ -1,864 +1,600 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
-import API from "../services/api";
+import PageShell from "../components/PageShell";
+import StatCard from "../components/StatCard";
+import EmptyState from "../components/EmptyState";
 import { useAuth } from "../context/AuthContext";
-
-const getToday = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const date = String(today.getDate()).padStart(2, "0");
-  return `${year}-${month}-${date}`;
-};
-
-const getDefaultStartDate = () => {
-  const today = new Date();
-  today.setDate(today.getDate() - 30);
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const date = String(today.getDate()).padStart(2, "0");
-  return `${year}-${month}-${date}`;
-};
+import API from "../services/api";
 
 const defaultForm = {
-  date: getToday(),
   weight: "",
-  workoutMinutes: 0,
-  caloriesBurned: 0,
-  performanceScore: 0,
-  workoutsCompleted: 0,
+  bodyFat: "",
+  chest: "",
+  waist: "",
+  arms: "",
+  legs: "",
+  workoutDuration: "",
+  caloriesBurned: "",
   notes: "",
 };
 
-const cardStyle = {
-  background: "#fff",
-  border: "1px solid #ddd",
-  borderRadius: "14px",
-  padding: "18px",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "10px",
-  borderRadius: "8px",
-  border: "1px solid #ccc",
-  boxSizing: "border-box",
-};
-
-const buttonStyle = {
-  padding: "10px 14px",
-  border: "none",
-  borderRadius: "8px",
-  background: "#0d6efd",
-  color: "#fff",
-  cursor: "pointer",
-};
-
-const secondaryButtonStyle = {
-  ...buttonStyle,
-  background: "#777",
-};
-
-const dangerButtonStyle = {
-  ...buttonStyle,
-  background: "#9a3f3f",
-};
-
-const Progress = () => {
+function Progress() {
   const { user } = useAuth();
 
-  const [logs, setLogs] = useState([]);
-  const [summary, setSummary] = useState({
-    totalLogs: 0,
-    totalWorkoutMinutes: 0,
-    totalCaloriesBurned: 0,
-    totalWorkoutsCompleted: 0,
-    averagePerformanceScore: 0,
-    startingWeight: null,
-    latestWeight: null,
-    weightChange: 0,
-  });
-
-  const [startDate, setStartDate] = useState(getDefaultStartDate());
-  const [endDate, setEndDate] = useState(getToday());
-
   const [form, setForm] = useState(defaultForm);
-  const [editingLogId, setEditingLogId] = useState("");
-  const [editForm, setEditForm] = useState(defaultForm);
-
+  const [progressEntries, setProgressEntries] = useState([]);
+  const [allProgressEntries, setAllProgressEntries] = useState([]);
+  const [adminMode, setAdminMode] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [createLoading, setCreateLoading] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState("");
-  const [pageError, setPageError] = useState("");
-  const [actionMessage, setActionMessage] = useState("");
-  const [actionError, setActionError] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const isTrainee = user?.role === "trainee";
+  const isAdmin = user?.role === "admin";
+  const visibleEntries = adminMode && isAdmin ? allProgressEntries : progressEntries;
 
-  const fetchProgressLogs = async () => {
+  const latestEntry = progressEntries[0] || null;
+
+  const stats = useMemo(() => {
+    const latestWeight = latestEntry?.weight || user?.weight || 0;
+    const totalCalories = progressEntries.reduce(
+      (sum, entry) => sum + Number(entry.caloriesBurned || 0),
+      0
+    );
+    const totalWorkoutMinutes = progressEntries.reduce(
+      (sum, entry) => sum + Number(entry.workoutDuration || 0),
+      0
+    );
+
+    return {
+      entries: progressEntries.length,
+      latestWeight,
+      totalCalories,
+      totalWorkoutMinutes,
+    };
+  }, [progressEntries, latestEntry, user]);
+
+  const fetchProgress = async () => {
     try {
       setLoading(true);
-      setPageError("");
+      setError("");
 
-      const response = await API.get("/progress/mine", {
-        params: {
-          startDate,
-          endDate,
-        },
-      });
+      const myResponse = await API.get("/progress/my-progress");
+      setProgressEntries(myResponse.data.progress || myResponse.data.entries || []);
 
-      setLogs(response.data.logs || []);
-      setSummary(
-        response.data.summary || {
-          totalLogs: 0,
-          totalWorkoutMinutes: 0,
-          totalCaloriesBurned: 0,
-          totalWorkoutsCompleted: 0,
-          averagePerformanceScore: 0,
-          startingWeight: null,
-          latestWeight: null,
-          weightChange: 0,
+      if (isAdmin) {
+        try {
+          const adminResponse = await API.get("/progress/admin/all");
+          setAllProgressEntries(
+            adminResponse.data.progress || adminResponse.data.entries || []
+          );
+        } catch {
+          setAllProgressEntries([]);
         }
-      );
+      }
     } catch (err) {
-      setPageError(err.response?.data?.message || "Failed to load progress logs");
+      setError(err.response?.data?.message || "Failed to load progress entries.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user && isTrainee) {
-      fetchProgressLogs();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
+    fetchProgress();
+  }, [isAdmin]);
 
-  const chartData = useMemo(() => {
-    return logs.map((log) => ({
-      ...log,
-      label: new Date(log.date).toLocaleDateString(),
-    }));
-  }, [logs]);
-
-  const maxWorkoutMinutes = useMemo(() => {
-    const maxValue = Math.max(...logs.map((log) => Number(log.workoutMinutes || 0)), 1);
-    return maxValue;
-  }, [logs]);
-
-  const maxCalories = useMemo(() => {
-    const maxValue = Math.max(...logs.map((log) => Number(log.caloriesBurned || 0)), 1);
-    return maxValue;
-  }, [logs]);
-
-  const handleFilterSubmit = async (e) => {
-    e.preventDefault();
-    await fetchProgressLogs();
+  const showSuccess = (message) => {
+    setSuccess(message);
+    setTimeout(() => setSuccess(""), 2500);
   };
 
-  const handleCreateLog = async (e) => {
-    e.preventDefault();
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+  const resetForm = () => {
+    setForm(defaultForm);
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!form.weight && !form.workoutDuration && !form.caloriesBurned) {
+      setError("Add at least weight, workout duration, or calories burned.");
+      return;
+    }
 
     try {
-      setCreateLoading(true);
-      setActionMessage("");
-      setActionError("");
+      setActionLoading(true);
+      setError("");
 
       await API.post("/progress", {
-        ...form,
-        weight: form.weight === "" ? "" : Number(form.weight),
-        workoutMinutes: Number(form.workoutMinutes || 0),
-        caloriesBurned: Number(form.caloriesBurned || 0),
-        performanceScore: Number(form.performanceScore || 0),
-        workoutsCompleted: Number(form.workoutsCompleted || 0),
+        weight: form.weight ? Number(form.weight) : undefined,
+        bodyFat: form.bodyFat ? Number(form.bodyFat) : undefined,
+        chest: form.chest ? Number(form.chest) : undefined,
+        waist: form.waist ? Number(form.waist) : undefined,
+        arms: form.arms ? Number(form.arms) : undefined,
+        legs: form.legs ? Number(form.legs) : undefined,
+        workoutDuration: form.workoutDuration
+          ? Number(form.workoutDuration)
+          : undefined,
+        caloriesBurned: form.caloriesBurned
+          ? Number(form.caloriesBurned)
+          : undefined,
+        notes: form.notes,
       });
 
-      setActionMessage("Progress log created successfully");
-      setForm(defaultForm);
-      await fetchProgressLogs();
+      resetForm();
+      await fetchProgress();
+      showSuccess("Progress entry saved successfully.");
     } catch (err) {
-      setActionError(err.response?.data?.message || "Failed to create progress log");
+      setError(err.response?.data?.message || "Failed to save progress entry.");
     } finally {
-      setCreateLoading(false);
+      setActionLoading(false);
     }
   };
 
-  const startEditing = (log) => {
-    setEditingLogId(log.id);
-    setEditForm({
-      date: log.date,
-      weight: log.weight ?? "",
-      workoutMinutes: log.workoutMinutes,
-      caloriesBurned: log.caloriesBurned,
-      performanceScore: log.performanceScore,
-      workoutsCompleted: log.workoutsCompleted,
-      notes: log.notes || "",
-    });
-  };
-
-  const cancelEditing = () => {
-    setEditingLogId("");
-    setEditForm(defaultForm);
-  };
-
-  const handleUpdateLog = async (logId) => {
+  const handleDelete = async (entryId) => {
     try {
-      setActionLoadingId(logId);
-      setActionMessage("");
-      setActionError("");
+      setActionLoading(true);
+      setError("");
 
-      await API.put(`/progress/${logId}`, {
-        ...editForm,
-        weight: editForm.weight === "" ? "" : Number(editForm.weight),
-        workoutMinutes: Number(editForm.workoutMinutes || 0),
-        caloriesBurned: Number(editForm.caloriesBurned || 0),
-        performanceScore: Number(editForm.performanceScore || 0),
-        workoutsCompleted: Number(editForm.workoutsCompleted || 0),
-      });
+      await API.delete(`/progress/${entryId}`);
 
-      setActionMessage("Progress log updated successfully");
-      cancelEditing();
-      await fetchProgressLogs();
+      await fetchProgress();
+      showSuccess("Progress entry deleted.");
     } catch (err) {
-      setActionError(err.response?.data?.message || "Failed to update progress log");
+      setError(err.response?.data?.message || "Failed to delete progress entry.");
     } finally {
-      setActionLoadingId("");
+      setActionLoading(false);
     }
   };
 
-  const handleDeleteLog = async (logId) => {
-    try {
-      setActionLoadingId(logId);
-      setActionMessage("");
-      setActionError("");
-
-      await API.delete(`/progress/${logId}`);
-
-      setActionMessage("Progress log deleted successfully");
-      await fetchProgressLogs();
-    } catch (err) {
-      setActionError(err.response?.data?.message || "Failed to delete progress log");
-    } finally {
-      setActionLoadingId("");
-    }
+  const formatDate = (dateValue) => {
+    if (!dateValue) return "N/A";
+    return new Date(dateValue).toLocaleString();
   };
 
   return (
     <>
       <Navbar />
 
-      <div style={{ maxWidth: "1150px", margin: "30px auto", padding: "0 20px" }}>
-        <h1>Fitness Progress Tracking</h1>
-        <p>
-          Track your workouts, weight changes, calories burned, and performance
-          improvement over time.
-        </p>
+      <PageShell
+        eyebrow="Performance"
+        title="Track your fitness progress"
+        subtitle="Record body metrics, workout duration, calories burned, and progress notes to monitor your fitness journey."
+        heroIcon="📈"
+        actions={
+          <>
+            <button type="button" onClick={fetchProgress} className="gs-button">
+              Refresh Progress
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setAdminMode((previous) => !previous)}
+                className="gs-button-outline"
+              >
+                {adminMode ? "Show My Entries" : "Admin: Show All"}
+              </button>
+            )}
+          </>
+        }
+      >
+        <section className="gs-grid gs-grid-4">
+          <StatCard
+            icon="📌"
+            label="Entries"
+            value={stats.entries}
+            helper="Saved progress logs"
+          />
 
-        {!isTrainee && (
-          <div style={cardStyle}>
-            <p>This feature is currently available for trainee accounts only.</p>
+          <StatCard
+            icon="⚖️"
+            label="Latest Weight"
+            value={stats.latestWeight ? `${stats.latestWeight} kg` : "Not set"}
+            helper="Most recent body weight"
+          />
+
+          <StatCard
+            icon="🔥"
+            label="Calories Burned"
+            value={stats.totalCalories}
+            helper="Total logged calories"
+          />
+
+          <StatCard
+            icon="⏱️"
+            label="Workout Minutes"
+            value={stats.totalWorkoutMinutes}
+            helper="Total logged training time"
+          />
+        </section>
+
+        {success && (
+          <div className="gs-alert-success" style={styles.alert}>
+            {success}
           </div>
         )}
 
-        {isTrainee && (
-          <>
-            {actionMessage && (
-              <div
-                style={{
-                  ...cardStyle,
-                  borderColor: "#b7e4c7",
-                  background: "#f1fff5",
-                  marginBottom: "16px",
-                }}
-              >
-                {actionMessage}
-              </div>
-            )}
-
-            {actionError && (
-              <div
-                style={{
-                  ...cardStyle,
-                  borderColor: "#f5c2c7",
-                  background: "#fff5f5",
-                  marginBottom: "16px",
-                }}
-              >
-                {actionError}
-              </div>
-            )}
-
-            {pageError && (
-              <div
-                style={{
-                  ...cardStyle,
-                  borderColor: "#f5c2c7",
-                  background: "#fff5f5",
-                  marginBottom: "16px",
-                }}
-              >
-                {pageError}
-              </div>
-            )}
-
-            <form
-              onSubmit={handleFilterSubmit}
-              style={{
-                ...cardStyle,
-                marginBottom: "20px",
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: "14px",
-              }}
-            >
-              <div>
-                <label>Start Date</label>
-                <input
-                  style={inputStyle}
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label>End Date</label>
-                <input
-                  style={inputStyle}
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: "flex", alignItems: "end" }}>
-                <button style={buttonStyle} type="submit" disabled={loading}>
-                  {loading ? "Loading..." : "Apply Filter"}
-                </button>
-              </div>
-            </form>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-                gap: "16px",
-                marginBottom: "20px",
-              }}
-            >
-              <div style={cardStyle}>
-                <p>Total Workouts</p>
-                <h2>{summary.totalWorkoutsCompleted}</h2>
-              </div>
-
-              <div style={cardStyle}>
-                <p>Workout Minutes</p>
-                <h2>{summary.totalWorkoutMinutes}</h2>
-              </div>
-
-              <div style={cardStyle}>
-                <p>Calories Burned</p>
-                <h2>{summary.totalCaloriesBurned}</h2>
-              </div>
-
-              <div style={cardStyle}>
-                <p>Avg Performance</p>
-                <h2>{summary.averagePerformanceScore}%</h2>
-              </div>
-
-              <div style={cardStyle}>
-                <p>Latest Weight</p>
-                <h2>
-                  {summary.latestWeight !== null ? `${summary.latestWeight} kg` : "N/A"}
-                </h2>
-              </div>
-
-              <div style={cardStyle}>
-                <p>Weight Change</p>
-                <h2>
-                  {summary.weightChange > 0 ? "+" : ""}
-                  {summary.weightChange} kg
-                </h2>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                gap: "20px",
-                marginBottom: "24px",
-              }}
-            >
-              <div style={cardStyle}>
-                <h2>Workout Minutes Chart</h2>
-
-                {chartData.length === 0 && <p>No chart data available.</p>}
-
-                {chartData.map((log) => (
-                  <div key={`minutes-${log.id}`} style={{ marginBottom: "12px" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      <span>{log.label}</span>
-                      <strong>{log.workoutMinutes} min</strong>
-                    </div>
-
-                    <div
-                      style={{
-                        height: "12px",
-                        background: "#eee",
-                        borderRadius: "999px",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${Math.min(
-                            100,
-                            (Number(log.workoutMinutes || 0) / maxWorkoutMinutes) * 100
-                          )}%`,
-                          background: "#0d6efd",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={cardStyle}>
-                <h2>Calories Burned Chart</h2>
-
-                {chartData.length === 0 && <p>No chart data available.</p>}
-
-                {chartData.map((log) => (
-                  <div key={`calories-${log.id}`} style={{ marginBottom: "12px" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      <span>{log.label}</span>
-                      <strong>{log.caloriesBurned} cal</strong>
-                    </div>
-
-                    <div
-                      style={{
-                        height: "12px",
-                        background: "#eee",
-                        borderRadius: "999px",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${Math.min(
-                            100,
-                            (Number(log.caloriesBurned || 0) / maxCalories) * 100
-                          )}%`,
-                          background: "#4caf50",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ ...cardStyle, marginBottom: "24px" }}>
-              <h2>Create Progress Log</h2>
-
-              <form
-                onSubmit={handleCreateLog}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                  gap: "14px",
-                }}
-              >
-                <div>
-                  <label>Date</label>
-                  <input
-                    style={inputStyle}
-                    type="date"
-                    value={form.date}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, date: e.target.value }))
-                    }
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label>Weight kg</label>
-                  <input
-                    style={inputStyle}
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={form.weight}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, weight: e.target.value }))
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label>Workout Minutes</label>
-                  <input
-                    style={inputStyle}
-                    type="number"
-                    min="0"
-                    value={form.workoutMinutes}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        workoutMinutes: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label>Calories Burned</label>
-                  <input
-                    style={inputStyle}
-                    type="number"
-                    min="0"
-                    value={form.caloriesBurned}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        caloriesBurned: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label>Performance Score 0-100</label>
-                  <input
-                    style={inputStyle}
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={form.performanceScore}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        performanceScore: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label>Workouts Completed</label>
-                  <input
-                    style={inputStyle}
-                    type="number"
-                    min="0"
-                    value={form.workoutsCompleted}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        workoutsCompleted: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <label>Notes</label>
-                  <textarea
-                    style={inputStyle}
-                    rows="3"
-                    value={form.notes}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, notes: e.target.value }))
-                    }
-                  />
-                </div>
-
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <button style={buttonStyle} type="submit" disabled={createLoading}>
-                    {createLoading ? "Creating..." : "Create Progress Log"}
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            <div>
-              <h2>Progress History</h2>
-
-              {loading && <p>Loading progress logs...</p>}
-
-              {!loading && logs.length === 0 && (
-                <div style={cardStyle}>
-                  <p>No progress logs found for this date range.</p>
-                </div>
-              )}
-
-              {!loading &&
-                logs.map((log) => (
-                  <div key={log.id} style={{ ...cardStyle, marginBottom: "16px" }}>
-                    {editingLogId === log.id ? (
-                      <>
-                        <h3>Edit Progress Log</h3>
-
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns:
-                              "repeat(auto-fit, minmax(220px, 1fr))",
-                            gap: "14px",
-                          }}
-                        >
-                          <div>
-                            <label>Date</label>
-                            <input
-                              style={inputStyle}
-                              type="date"
-                              value={editForm.date}
-                              onChange={(e) =>
-                                setEditForm((prev) => ({
-                                  ...prev,
-                                  date: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-
-                          <div>
-                            <label>Weight kg</label>
-                            <input
-                              style={inputStyle}
-                              type="number"
-                              min="0"
-                              step="0.1"
-                              value={editForm.weight}
-                              onChange={(e) =>
-                                setEditForm((prev) => ({
-                                  ...prev,
-                                  weight: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-
-                          <div>
-                            <label>Workout Minutes</label>
-                            <input
-                              style={inputStyle}
-                              type="number"
-                              min="0"
-                              value={editForm.workoutMinutes}
-                              onChange={(e) =>
-                                setEditForm((prev) => ({
-                                  ...prev,
-                                  workoutMinutes: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-
-                          <div>
-                            <label>Calories Burned</label>
-                            <input
-                              style={inputStyle}
-                              type="number"
-                              min="0"
-                              value={editForm.caloriesBurned}
-                              onChange={(e) =>
-                                setEditForm((prev) => ({
-                                  ...prev,
-                                  caloriesBurned: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-
-                          <div>
-                            <label>Performance Score</label>
-                            <input
-                              style={inputStyle}
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={editForm.performanceScore}
-                              onChange={(e) =>
-                                setEditForm((prev) => ({
-                                  ...prev,
-                                  performanceScore: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-
-                          <div>
-                            <label>Workouts Completed</label>
-                            <input
-                              style={inputStyle}
-                              type="number"
-                              min="0"
-                              value={editForm.workoutsCompleted}
-                              onChange={(e) =>
-                                setEditForm((prev) => ({
-                                  ...prev,
-                                  workoutsCompleted: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-
-                          <div style={{ gridColumn: "1 / -1" }}>
-                            <label>Notes</label>
-                            <textarea
-                              style={inputStyle}
-                              rows="3"
-                              value={editForm.notes}
-                              onChange={(e) =>
-                                setEditForm((prev) => ({
-                                  ...prev,
-                                  notes: e.target.value,
-                                }))
-                              }
-                            />
-                          </div>
-
-                          <div
-                            style={{
-                              gridColumn: "1 / -1",
-                              display: "flex",
-                              gap: "10px",
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            <button
-                              style={buttonStyle}
-                              onClick={() => handleUpdateLog(log.id)}
-                              disabled={actionLoadingId === log.id}
-                            >
-                              {actionLoadingId === log.id ? "Saving..." : "Save"}
-                            </button>
-
-                            <button
-                              style={secondaryButtonStyle}
-                              onClick={cancelEditing}
-                              disabled={actionLoadingId === log.id}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            gap: "14px",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <div>
-                            <h3 style={{ marginTop: 0 }}>
-                              {new Date(log.date).toLocaleDateString()}
-                            </h3>
-                            <p>
-                              <strong>Weight:</strong>{" "}
-                              {log.weight !== null ? `${log.weight} kg` : "Not added"}
-                            </p>
-                            <p>
-                              <strong>Workout Minutes:</strong> {log.workoutMinutes}
-                            </p>
-                            <p>
-                              <strong>Calories Burned:</strong> {log.caloriesBurned}
-                            </p>
-                            <p>
-                              <strong>Workouts Completed:</strong>{" "}
-                              {log.workoutsCompleted}
-                            </p>
-                            <p>
-                              <strong>Performance Score:</strong>{" "}
-                              {log.performanceScore}%
-                            </p>
-                            <p>
-                              <strong>Notes:</strong> {log.notes || "No notes"}
-                            </p>
-                          </div>
-
-                          <div style={{ minWidth: "220px" }}>
-                            <p>
-                              <strong>Performance</strong>
-                            </p>
-
-                            <div
-                              style={{
-                                width: "100%",
-                                height: "14px",
-                                background: "#eee",
-                                borderRadius: "999px",
-                                overflow: "hidden",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: `${log.performanceScore}%`,
-                                  height: "100%",
-                                  background: "#f59f00",
-                                }}
-                              />
-                            </div>
-
-                            <p>{log.performanceScore}%</p>
-                          </div>
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "10px",
-                            flexWrap: "wrap",
-                            marginTop: "14px",
-                          }}
-                        >
-                          <button
-                            style={buttonStyle}
-                            onClick={() => startEditing(log)}
-                            disabled={actionLoadingId === log.id}
-                          >
-                            Edit
-                          </button>
-
-                          <button
-                            style={dangerButtonStyle}
-                            onClick={() => handleDeleteLog(log.id)}
-                            disabled={actionLoadingId === log.id}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-            </div>
-          </>
+        {error && (
+          <div className="gs-alert-error" style={styles.alert}>
+            {error}
+          </div>
         )}
-      </div>
+
+        <section style={styles.layout}>
+          <form onSubmit={handleSubmit} style={styles.formCard}>
+            <div>
+              <p style={styles.kicker}>New Entry</p>
+              <h2 style={styles.sectionTitle}>Log Progress</h2>
+              <p style={styles.muted}>
+                Add body measurements and workout performance details.
+              </p>
+            </div>
+
+            <div style={styles.formGrid}>
+              <label className="gs-label">
+                Weight kg
+                <input
+                  name="weight"
+                  type="number"
+                  value={form.weight}
+                  onChange={handleChange}
+                  placeholder="70"
+                  className="gs-input"
+                />
+              </label>
+
+              <label className="gs-label">
+                Body Fat %
+                <input
+                  name="bodyFat"
+                  type="number"
+                  value={form.bodyFat}
+                  onChange={handleChange}
+                  placeholder="18"
+                  className="gs-input"
+                />
+              </label>
+
+              <label className="gs-label">
+                Chest cm
+                <input
+                  name="chest"
+                  type="number"
+                  value={form.chest}
+                  onChange={handleChange}
+                  placeholder="95"
+                  className="gs-input"
+                />
+              </label>
+
+              <label className="gs-label">
+                Waist cm
+                <input
+                  name="waist"
+                  type="number"
+                  value={form.waist}
+                  onChange={handleChange}
+                  placeholder="80"
+                  className="gs-input"
+                />
+              </label>
+
+              <label className="gs-label">
+                Arms cm
+                <input
+                  name="arms"
+                  type="number"
+                  value={form.arms}
+                  onChange={handleChange}
+                  placeholder="35"
+                  className="gs-input"
+                />
+              </label>
+
+              <label className="gs-label">
+                Legs cm
+                <input
+                  name="legs"
+                  type="number"
+                  value={form.legs}
+                  onChange={handleChange}
+                  placeholder="55"
+                  className="gs-input"
+                />
+              </label>
+
+              <label className="gs-label">
+                Workout Minutes
+                <input
+                  name="workoutDuration"
+                  type="number"
+                  value={form.workoutDuration}
+                  onChange={handleChange}
+                  placeholder="60"
+                  className="gs-input"
+                />
+              </label>
+
+              <label className="gs-label">
+                Calories Burned
+                <input
+                  name="caloriesBurned"
+                  type="number"
+                  value={form.caloriesBurned}
+                  onChange={handleChange}
+                  placeholder="400"
+                  className="gs-input"
+                />
+              </label>
+            </div>
+
+            <label className="gs-label">
+              Notes
+              <textarea
+                name="notes"
+                value={form.notes}
+                onChange={handleChange}
+                placeholder="How did the workout feel?"
+                rows="4"
+                className="gs-input"
+              />
+            </label>
+
+            <div style={styles.buttonRow}>
+              <button type="submit" disabled={actionLoading} className="gs-button">
+                {actionLoading ? "Saving..." : "Save Progress"}
+              </button>
+
+              <button
+                type="button"
+                onClick={resetForm}
+                className="gs-button-outline"
+              >
+                Reset
+              </button>
+            </div>
+          </form>
+
+          <aside style={styles.summaryCard}>
+            <p style={styles.kicker}>Latest Snapshot</p>
+            <h2 style={styles.sectionTitle}>Current Progress</h2>
+
+            {latestEntry ? (
+              <div style={styles.snapshotList}>
+                <Snapshot label="Weight" value={`${latestEntry.weight || "N/A"} kg`} />
+                <Snapshot label="Body Fat" value={`${latestEntry.bodyFat || "N/A"}%`} />
+                <Snapshot
+                  label="Calories"
+                  value={`${latestEntry.caloriesBurned || "N/A"}`}
+                />
+                <Snapshot
+                  label="Workout"
+                  value={`${latestEntry.workoutDuration || "N/A"} min`}
+                />
+                <Snapshot label="Logged" value={formatDate(latestEntry.createdAt)} />
+              </div>
+            ) : (
+              <EmptyState
+                icon="📈"
+                title="No snapshot yet"
+                message="Create your first progress entry to see your current stats."
+              />
+            )}
+          </aside>
+        </section>
+
+        <section style={styles.historySection}>
+          <div className="gs-section-header">
+            <div>
+              <p style={styles.kicker}>History</p>
+              <h2 className="gs-section-title">
+                {adminMode && isAdmin ? "All Progress Entries" : "My Progress Entries"}
+              </h2>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="gs-empty">Loading progress entries...</div>
+          ) : visibleEntries.length === 0 ? (
+            <EmptyState
+              icon="📂"
+              title="No progress entries"
+              message="Saved progress entries will appear here."
+            />
+          ) : (
+            <div style={styles.entryGrid}>
+              {visibleEntries.map((entry) => (
+                <article key={entry.id || entry._id} style={styles.entryCard}>
+                  <div style={styles.entryTop}>
+                    <div>
+                      <span className="gs-pill">
+                        {entry.user?.name || "Progress Entry"}
+                      </span>
+                      <h3 style={styles.entryTitle}>
+                        {entry.weight ? `${entry.weight} kg` : "Workout Log"}
+                      </h3>
+                      <p style={styles.muted}>{formatDate(entry.createdAt)}</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(entry.id || entry._id)}
+                      disabled={actionLoading}
+                      className="gs-button-danger"
+                    >
+                      Delete
+                    </button>
+                  </div>
+
+                  <div style={styles.metricGrid}>
+                    <Metric label="Body Fat" value={entry.bodyFat || "N/A"} suffix="%" />
+                    <Metric label="Chest" value={entry.chest || "N/A"} suffix="cm" />
+                    <Metric label="Waist" value={entry.waist || "N/A"} suffix="cm" />
+                    <Metric
+                      label="Workout"
+                      value={entry.workoutDuration || "N/A"}
+                      suffix="min"
+                    />
+                    <Metric
+                      label="Calories"
+                      value={entry.caloriesBurned || "N/A"}
+                      suffix=""
+                    />
+                  </div>
+
+                  {entry.notes && <p style={styles.notes}>{entry.notes}</p>}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </PageShell>
     </>
   );
+}
+
+function Snapshot({ label, value }) {
+  return (
+    <div style={styles.snapshotItem}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function Metric({ label, value, suffix }) {
+  return (
+    <div style={styles.metricBox}>
+      <p>{label}</p>
+      <strong>
+        {value}
+        {value !== "N/A" ? suffix : ""}
+      </strong>
+    </div>
+  );
+}
+
+const styles = {
+  alert: {
+    marginTop: 16,
+  },
+  layout: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1.2fr) minmax(310px, 0.8fr)",
+    gap: 20,
+    marginTop: 24,
+    alignItems: "start",
+  },
+  formCard: {
+    border: "1px solid #e2e8f0",
+    borderRadius: 30,
+    padding: 22,
+    background: "rgba(255,255,255,0.92)",
+    boxShadow: "0 24px 70px rgba(15,23,42,0.08)",
+    display: "grid",
+    gap: 16,
+  },
+  summaryCard: {
+    border: "1px solid #e2e8f0",
+    borderRadius: 30,
+    padding: 22,
+    background: "rgba(255,255,255,0.92)",
+    boxShadow: "0 24px 70px rgba(15,23,42,0.08)",
+  },
+  kicker: {
+    margin: "0 0 6px",
+    color: "#16a34a",
+    fontWeight: 950,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    fontSize: 13,
+  },
+  sectionTitle: {
+    margin: 0,
+    fontSize: 28,
+    letterSpacing: "-0.045em",
+  },
+  muted: {
+    margin: "8px 0 0",
+    color: "#64748b",
+    lineHeight: 1.6,
+  },
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gap: 14,
+  },
+  buttonRow: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  snapshotList: {
+    display: "grid",
+    gap: 10,
+    marginTop: 16,
+  },
+  snapshotItem: {
+    border: "1px solid #e2e8f0",
+    borderRadius: 18,
+    padding: 14,
+    background: "#f8fafc",
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  historySection: {
+    marginTop: 28,
+  },
+  entryGrid: {
+    display: "grid",
+    gap: 16,
+  },
+  entryCard: {
+    border: "1px solid #e2e8f0",
+    borderRadius: 28,
+    padding: 20,
+    background: "rgba(255,255,255,0.92)",
+    boxShadow: "0 22px 60px rgba(15,23,42,0.07)",
+  },
+  entryTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 16,
+    alignItems: "flex-start",
+  },
+  entryTitle: {
+    margin: "10px 0 0",
+    fontSize: 26,
+    letterSpacing: "-0.045em",
+  },
+  metricGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))",
+    gap: 12,
+    marginTop: 16,
+  },
+  metricBox: {
+    border: "1px solid #e2e8f0",
+    borderRadius: 18,
+    padding: 14,
+    background: "#f8fafc",
+  },
+  notes: {
+    borderTop: "1px solid #e2e8f0",
+    paddingTop: 14,
+    margin: "16px 0 0",
+    color: "#334155",
+    lineHeight: 1.7,
+  },
 };
 
 export default Progress;
