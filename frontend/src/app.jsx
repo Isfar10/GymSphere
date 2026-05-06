@@ -10,11 +10,11 @@ import WeeklyGoals from "./pages/weeklyGoals";
 import Feedback from "./pages/Feedback";
 import TrainerMatching from "./pages/TrainerMatching";
 import Progress from "./pages/Progress";
+
 import Notifications from "./pages/Notifications";
 import SocialFeed from "./pages/SocialFeed";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import Memberships from "./pages/Memberships";
-
 import ManualBkashPayments from "./pages/ManualBkashPayments";
 import DietPlans from "./pages/DietPlans";
 
@@ -26,7 +26,6 @@ function App() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       <Route path="/login" element={<Login />} />
-
       <Route path="/register" element={<Register />} />
 
       <Route
@@ -129,7 +128,6 @@ function App() {
       />
 
       <Route
-
         path="/manual-bkash-payments"
         element={
           <ProtectedRoute>
@@ -137,6 +135,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/diet-plans"
         element={
@@ -145,10 +144,8 @@ function App() {
           </ProtectedRoute>
         }
       />
-      
 
       <Route
-
         path="/feedback"
         element={
           <ProtectedRoute>
@@ -161,5 +158,3 @@ function App() {
     </Routes>
   );
 }
-
-export default App;

@@ -1,371 +1,611 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
-import API from "../services/api";
+import PageShell from "../components/PageShell";
+import StatCard from "../components/StatCard";
+import EmptyState from "../components/EmptyState";
+import StatusBadge from "../components/StatusBadge";
 import { useAuth } from "../context/AuthContext";
+import API from "../services/api";
 
 const defaultForm = {
-  type: "complaint",
-  category: "other",
   subject: "",
+  category: "general",
   message: "",
+  rating: "5",
 };
 
-const defaultAdminForm = {
-  status: "in_review",
-  adminResponse: "",
-};
-
-const Feedback = () => {
+function Feedback() {
   const { user } = useAuth();
 
+  const [form, setForm] = useState(defaultForm);
   const [myFeedback, setMyFeedback] = useState([]);
   const [allFeedback, setAllFeedback] = useState([]);
-  const [form, setForm] = useState(defaultForm);
-  const [adminForms, setAdminForms] = useState({});
+  const [adminMode, setAdminMode] = useState(false);
+  const [replyText, setReplyText] = useState({});
+  const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [createLoading, setCreateLoading] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState("");
-  const [message, setMessage] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const isAdmin = user?.role === "admin";
 
-  const fetchMyFeedback = async () => {
-    const response = await API.get("/feedback/mine");
-    setMyFeedback(response.data.feedback || []);
-  };
+  const visibleFeedback = useMemo(() => {
+    const source = adminMode && isAdmin ? allFeedback : myFeedback;
 
-  const fetchAllFeedback = async () => {
-    if (!isAdmin) return;
-    const response = await API.get("/feedback");
-    const items = response.data.feedback || [];
-    setAllFeedback(items);
+    if (statusFilter === "all") return source;
 
-    const nextAdminForms = {};
-    items.forEach((item) => {
-      nextAdminForms[item.id] = {
-        status: item.status || "in_review",
-        adminResponse: item.adminResponse || "",
-      };
-    });
-    setAdminForms(nextAdminForms);
-  };
+    return source.filter((item) => item.status === statusFilter);
+  }, [adminMode, isAdmin, allFeedback, myFeedback, statusFilter]);
 
-  const fetchData = async () => {
+  const stats = useMemo(() => {
+    const source = adminMode && isAdmin ? allFeedback : myFeedback;
+
+    return {
+      total: source.length,
+      open: source.filter((item) => item.status === "open").length,
+      resolved: source.filter((item) => item.status === "resolved").length,
+      averageRating:
+        source.length === 0
+          ? "0.0"
+          : (
+              source.reduce((sum, item) => sum + Number(item.rating || 0), 0) /
+              source.length
+            ).toFixed(1),
+    };
+  }, [adminMode, isAdmin, allFeedback, myFeedback]);
+
+  const fetchFeedback = async () => {
     try {
       setLoading(true);
       setError("");
-      await fetchMyFeedback();
-      await fetchAllFeedback();
+
+      const myResponse = await API.get("/feedback/my-feedback");
+      setMyFeedback(myResponse.data.feedback || myResponse.data.items || []);
+
+      if (isAdmin) {
+        const adminResponse = await API.get("/feedback/admin/all");
+        setAllFeedback(adminResponse.data.feedback || adminResponse.data.items || []);
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load feedback");
+      setError(err.response?.data?.message || "Failed to load feedback.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
+    fetchFeedback();
+  }, [isAdmin]);
 
-  const handleCreate = async (e) => {
-    e.preventDefault();
-
-    try {
-      setCreateLoading(true);
-      setMessage("");
-      setError("");
-
-      await API.post("/feedback", form);
-
-      setMessage("Feedback submitted successfully");
-      setForm(defaultForm);
-      await fetchData();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to submit feedback");
-    } finally {
-      setCreateLoading(false);
-    }
+  const showSuccess = (message) => {
+    setSuccess(message);
+    setTimeout(() => setSuccess(""), 2500);
   };
 
-  const handleDelete = async (id) => {
-    try {
-      setActionLoadingId(id);
-      setMessage("");
-      setError("");
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
-      await API.delete(`/feedback/${id}`);
-
-      setMessage("Feedback deleted successfully");
-      await fetchData();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to delete feedback");
-    } finally {
-      setActionLoadingId("");
-    }
-  };
-
-  const handleAdminFieldChange = (id, field, value) => {
-    setAdminForms((prev) => ({
-      ...prev,
-      [id]: {
-        ...(prev[id] || defaultAdminForm),
-        [field]: value,
-      },
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
     }));
   };
 
-  const handleAdminUpdate = async (id) => {
+  const resetForm = () => {
+    setForm(defaultForm);
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!form.subject.trim() || !form.message.trim()) {
+      setError("Subject and message are required.");
+      return;
+    }
+
     try {
-      setActionLoadingId(id);
-      setMessage("");
+      setActionLoading(true);
       setError("");
 
-      await API.patch(`/feedback/${id}`, adminForms[id]);
+      await API.post("/feedback", {
+        subject: form.subject,
+        category: form.category,
+        message: form.message,
+        rating: Number(form.rating),
+      });
 
-      setMessage("Feedback updated successfully");
-      await fetchData();
+      resetForm();
+      await fetchFeedback();
+      showSuccess("Feedback submitted successfully.");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update feedback");
+      setError(err.response?.data?.message || "Failed to submit feedback.");
     } finally {
-      setActionLoadingId("");
+      setActionLoading(false);
     }
+  };
+
+  const deleteFeedback = async (feedbackId) => {
+    try {
+      setActionLoading(true);
+      setError("");
+
+      await API.delete(`/feedback/${feedbackId}`);
+
+      await fetchFeedback();
+      showSuccess("Feedback deleted.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete feedback.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const updateStatus = async (feedbackId, status) => {
+    try {
+      setActionLoading(true);
+      setError("");
+
+      await API.patch(`/feedback/${feedbackId}/status`, { status });
+
+      await fetchFeedback();
+      showSuccess(`Feedback marked as ${status}.`);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update feedback.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const sendReply = async (feedbackId) => {
+    try {
+      setActionLoading(true);
+      setError("");
+
+      await API.patch(`/feedback/${feedbackId}/reply`, {
+        reply: replyText[feedbackId] || "",
+      });
+
+      setReplyText((previous) => ({
+        ...previous,
+        [feedbackId]: "",
+      }));
+
+      await fetchFeedback();
+      showSuccess("Reply sent successfully.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send reply.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const updateReplyText = (feedbackId, value) => {
+    setReplyText((previous) => ({
+      ...previous,
+      [feedbackId]: value,
+    }));
+  };
+
+  const formatDate = (dateValue) => {
+    if (!dateValue) return "N/A";
+    return new Date(dateValue).toLocaleString();
   };
 
   return (
     <>
       <Navbar />
 
-      <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "24px" }}>
-        <h1>Complaint & Recommendation</h1>
-        <p>Submit complaints, suggestions, and platform feedback.</p>
-
-        {message && (
-          <p style={{ color: "green", fontWeight: "bold" }}>{message}</p>
-        )}
-        {error && (
-          <p style={{ color: "crimson", fontWeight: "bold" }}>{error}</p>
-        )}
-
-        <div
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: "12px",
-            padding: "20px",
-            background: "#fff",
-            marginBottom: "24px",
-          }}
-        >
-          <h2>Submit Feedback</h2>
-
-          <form
-            onSubmit={handleCreate}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "12px",
-            }}
-          >
-            <select
-              value={form.type}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, type: e.target.value }))
-              }
-            >
-              <option value="complaint">Complaint</option>
-              <option value="recommendation">Recommendation</option>
-            </select>
-
-            <select
-              value={form.category}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, category: e.target.value }))
-              }
-            >
-              <option value="trainer">Trainer</option>
-              <option value="booking">Booking</option>
-              <option value="payment">Payment</option>
-              <option value="subscription">Subscription</option>
-              <option value="store">Store</option>
-              <option value="app">App</option>
-              <option value="other">Other</option>
-            </select>
-
-            <input
-              type="text"
-              placeholder="Subject"
-              value={form.subject}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, subject: e.target.value }))
-              }
-              required
-              style={{ gridColumn: "1 / -1" }}
-            />
-
-            <textarea
-              rows="5"
-              placeholder="Describe the issue or your recommendation"
-              value={form.message}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, message: e.target.value }))
-              }
-              required
-              style={{ gridColumn: "1 / -1" }}
-            />
-
-            <button type="submit" disabled={createLoading}>
-              {createLoading ? "Submitting..." : "Submit"}
+      <PageShell
+        eyebrow="Support"
+        title="Feedback and complaints"
+        subtitle="Share problems, suggestions, and ratings with the GymSphere team. Admins can review, reply, and resolve reports."
+        heroIcon="💬"
+        actions={
+          <>
+            <button type="button" onClick={fetchFeedback} className="gs-button">
+              Refresh Feedback
             </button>
-          </form>
-        </div>
-
-        <div style={{ marginBottom: "30px" }}>
-          <h2>My Submissions</h2>
-
-          {loading && <p>Loading feedback...</p>}
-          {!loading && myFeedback.length === 0 && (
-            <p>No feedback submitted yet.</p>
-          )}
-
-          {!loading &&
-            myFeedback.length > 0 &&
-            myFeedback.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: "12px",
-                  padding: "18px",
-                  background: "#fff",
-                  marginBottom: "16px",
-                }}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setAdminMode((previous) => !previous)}
+                className="gs-button-outline"
               >
-                <h3 style={{ marginTop: 0 }}>{item.subject}</h3>
-                <p>
-                  <strong>Type:</strong> {item.type}
-                </p>
-                <p>
-                  <strong>Category:</strong> {item.category}
-                </p>
-                <p>
-                  <strong>Status:</strong> {item.status}
-                </p>
-                <p>
-                  <strong>Message:</strong> {item.message}
-                </p>
-                <p>
-                  <strong>Admin Response:</strong>{" "}
-                  {item.adminResponse || "No response yet"}
-                </p>
-                <small>{new Date(item.createdAt).toLocaleString()}</small>
+                {adminMode ? "Show My Feedback" : "Admin: Show All"}
+              </button>
+            )}
+          </>
+        }
+      >
+        <section className="gs-grid gs-grid-4">
+          <StatCard icon="💬" label="Total" value={stats.total} helper="Feedback records" />
+          <StatCard icon="📬" label="Open" value={stats.open} helper="Needs attention" />
+          <StatCard icon="✅" label="Resolved" value={stats.resolved} helper="Completed cases" />
+          <StatCard icon="⭐" label="Avg Rating" value={stats.averageRating} helper="User satisfaction" />
+        </section>
 
-                <div style={{ marginTop: "12px" }}>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    disabled={actionLoadingId === item.id}
-                    style={{ background: "#9a3f3f", color: "#fff" }}
-                  >
-                    {actionLoadingId === item.id ? "Deleting..." : "Delete"}
-                  </button>
-                </div>
-              </div>
-            ))}
-        </div>
-
-        {isAdmin && (
-          <div>
-            <h2>Admin Review Panel</h2>
-
-            {allFeedback.length === 0 && !loading && <p>No feedback found.</p>}
-
-            {allFeedback.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: "12px",
-                  padding: "18px",
-                  background: "#fff",
-                  marginBottom: "16px",
-                }}
-              >
-                <h3 style={{ marginTop: 0 }}>{item.subject}</h3>
-                <p>
-                  <strong>User:</strong> {item.user?.name} ({item.user?.email})
-                </p>
-                <p>
-                  <strong>Role:</strong> {item.user?.role}
-                </p>
-                <p>
-                  <strong>Type:</strong> {item.type}
-                </p>
-                <p>
-                  <strong>Category:</strong> {item.category}
-                </p>
-                <p>
-                  <strong>Message:</strong> {item.message}
-                </p>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                    gap: "12px",
-                    marginTop: "12px",
-                  }}
-                >
-                  <select
-                    value={adminForms[item.id]?.status || "in_review"}
-                    onChange={(e) =>
-                      handleAdminFieldChange(item.id, "status", e.target.value)
-                    }
-                  >
-                    <option value="open">Open</option>
-                    <option value="in_review">In Review</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-
-                  <textarea
-                    rows="4"
-                    placeholder="Admin response"
-                    value={adminForms[item.id]?.adminResponse || ""}
-                    onChange={(e) =>
-                      handleAdminFieldChange(
-                        item.id,
-                        "adminResponse",
-                        e.target.value
-                      )
-                    }
-                    style={{ gridColumn: "1 / -1" }}
-                  />
-
-                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                    <button
-                      onClick={() => handleAdminUpdate(item.id)}
-                      disabled={actionLoadingId === item.id}
-                    >
-                      {actionLoadingId === item.id ? "Saving..." : "Save Update"}
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      disabled={actionLoadingId === item.id}
-                      style={{ background: "#9a3f3f", color: "#fff" }}
-                    >
-                      {actionLoadingId === item.id ? "Deleting..." : "Delete"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+        {success && (
+          <div className="gs-alert-success" style={styles.alert}>
+            {success}
           </div>
         )}
-      </div>
+
+        {error && (
+          <div className="gs-alert-error" style={styles.alert}>
+            {error}
+          </div>
+        )}
+
+        <section style={styles.layout}>
+          <form onSubmit={handleSubmit} style={styles.formCard}>
+            <div>
+              <p style={styles.kicker}>New Feedback</p>
+              <h2 style={styles.sectionTitle}>Send a Message</h2>
+              <p style={styles.muted}>
+                Tell us what happened, what can improve, or what you liked.
+              </p>
+            </div>
+
+            <label className="gs-label">
+              Subject
+              <input
+                name="subject"
+                value={form.subject}
+                onChange={handleChange}
+                placeholder="Booking issue, suggestion, payment problem..."
+                className="gs-input"
+              />
+            </label>
+
+            <div style={styles.formGrid}>
+              <label className="gs-label">
+                Category
+                <select
+                  name="category"
+                  value={form.category}
+                  onChange={handleChange}
+                  className="gs-input"
+                >
+                  <option value="general">General</option>
+                  <option value="booking">Booking</option>
+                  <option value="payment">Payment</option>
+                  <option value="trainer">Trainer</option>
+                  <option value="diet">Diet Plan</option>
+                  <option value="bug">Bug</option>
+                  <option value="suggestion">Suggestion</option>
+                </select>
+              </label>
+
+              <label className="gs-label">
+                Rating
+                <select
+                  name="rating"
+                  value={form.rating}
+                  onChange={handleChange}
+                  className="gs-input"
+                >
+                  <option value="5">5 - Excellent</option>
+                  <option value="4">4 - Good</option>
+                  <option value="3">3 - Average</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="1">1 - Bad</option>
+                </select>
+              </label>
+            </div>
+
+            <label className="gs-label">
+              Message
+              <textarea
+                name="message"
+                value={form.message}
+                onChange={handleChange}
+                placeholder="Write your feedback..."
+                rows="5"
+                className="gs-input"
+              />
+            </label>
+
+            <div style={styles.buttonRow}>
+              <button type="submit" disabled={actionLoading} className="gs-button">
+                {actionLoading ? "Submitting..." : "Submit Feedback"}
+              </button>
+
+              <button
+                type="button"
+                onClick={resetForm}
+                className="gs-button-outline"
+              >
+                Reset
+              </button>
+            </div>
+          </form>
+
+          <aside style={styles.helpCard}>
+            <p style={styles.kicker}>Support Flow</p>
+            <h2 style={styles.sectionTitle}>How it works</h2>
+
+            <div style={styles.stepList}>
+              <Step number="1" title="Submit" text="Send your issue or suggestion." />
+              <Step number="2" title="Review" text="Admin checks and replies." />
+              <Step number="3" title="Resolve" text="Feedback is marked completed." />
+            </div>
+          </aside>
+        </section>
+
+        <section style={styles.feedbackSection}>
+          <div className="gs-section-header">
+            <div>
+              <p style={styles.kicker}>Inbox</p>
+              <h2 className="gs-section-title">
+                {adminMode && isAdmin ? "All Feedback" : "My Feedback"}
+              </h2>
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="gs-input"
+              style={{ maxWidth: 190 }}
+            >
+              <option value="all">All status</option>
+              <option value="open">Open</option>
+              <option value="in_review">In Review</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
+
+          {loading ? (
+            <div className="gs-empty">Loading feedback...</div>
+          ) : visibleFeedback.length === 0 ? (
+            <EmptyState
+              icon="📭"
+              title="No feedback found"
+              message="Feedback submissions will appear here."
+            />
+          ) : (
+            <div style={styles.feedbackGrid}>
+              {visibleFeedback.map((item) => (
+                <article key={item.id || item._id} style={styles.feedbackCard}>
+                  <div style={styles.feedbackTop}>
+                    <div>
+                      <span className="gs-pill">{item.category || "general"}</span>
+                      <h3 style={styles.feedbackTitle}>{item.subject}</h3>
+                      <p style={styles.muted}>
+                        {adminMode && isAdmin
+                          ? `${item.user?.name || "User"} • `
+                          : ""}
+                        {formatDate(item.createdAt)}
+                      </p>
+                    </div>
+
+                    <StatusBadge status={item.status || "open"} />
+                  </div>
+
+                  <div style={styles.ratingLine}>
+                    <span>Rating</span>
+                    <strong>{"⭐".repeat(Number(item.rating || 0))}</strong>
+                  </div>
+
+                  <p style={styles.messageBox}>{item.message}</p>
+
+                  {item.reply && (
+                    <div style={styles.replyBox}>
+                      <strong>Admin Reply</strong>
+                      <p>{item.reply}</p>
+                    </div>
+                  )}
+
+                  {isAdmin && adminMode && (
+                    <div style={styles.adminBox}>
+                      <textarea
+                        value={replyText[item.id || item._id] || ""}
+                        onChange={(event) =>
+                          updateReplyText(item.id || item._id, event.target.value)
+                        }
+                        placeholder="Write admin reply..."
+                        rows="3"
+                        className="gs-input"
+                      />
+
+                      <div style={styles.buttonRow}>
+                        <button
+                          type="button"
+                          onClick={() => sendReply(item.id || item._id)}
+                          disabled={actionLoading}
+                          className="gs-button"
+                        >
+                          Send Reply
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => updateStatus(item.id || item._id, "in_review")}
+                          disabled={actionLoading}
+                          className="gs-button-outline"
+                        >
+                          In Review
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => updateStatus(item.id || item._id, "resolved")}
+                          disabled={actionLoading}
+                          className="gs-button-outline"
+                        >
+                          Resolve
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={styles.footerRow}>
+                    <small style={styles.muted}>
+                      Last updated: {formatDate(item.updatedAt)}
+                    </small>
+
+                    <button
+                      type="button"
+                      onClick={() => deleteFeedback(item.id || item._id)}
+                      disabled={actionLoading}
+                      className="gs-button-danger"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </PageShell>
     </>
   );
+}
+
+function Step({ number, title, text }) {
+  return (
+    <div style={styles.step}>
+      <span>{number}</span>
+      <div>
+        <strong>{title}</strong>
+        <p>{text}</p>
+      </div>
+    </div>
+  );
+}
+
+const styles = {
+  alert: {
+    marginTop: 16,
+  },
+  layout: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1.1fr) minmax(300px, 0.9fr)",
+    gap: 20,
+    marginTop: 24,
+    alignItems: "start",
+  },
+  formCard: {
+    border: "1px solid #e2e8f0",
+    borderRadius: 30,
+    padding: 22,
+    background: "rgba(255,255,255,0.92)",
+    boxShadow: "0 24px 70px rgba(15,23,42,0.08)",
+    display: "grid",
+    gap: 16,
+  },
+  helpCard: {
+    border: "1px solid #bbf7d0",
+    borderRadius: 30,
+    padding: 22,
+    background: "linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)",
+    boxShadow: "0 24px 70px rgba(15,23,42,0.08)",
+  },
+  kicker: {
+    margin: "0 0 6px",
+    color: "#16a34a",
+    fontWeight: 950,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    fontSize: 13,
+  },
+  sectionTitle: {
+    margin: 0,
+    fontSize: 28,
+    letterSpacing: "-0.045em",
+  },
+  muted: {
+    margin: "8px 0 0",
+    color: "#64748b",
+    lineHeight: 1.6,
+  },
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 14,
+  },
+  buttonRow: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  stepList: {
+    display: "grid",
+    gap: 12,
+    marginTop: 18,
+  },
+  step: {
+    display: "flex",
+    gap: 12,
+    border: "1px solid #bbf7d0",
+    borderRadius: 20,
+    padding: 14,
+    background: "#ffffff",
+  },
+  feedbackSection: {
+    marginTop: 28,
+  },
+  feedbackGrid: {
+    display: "grid",
+    gap: 16,
+  },
+  feedbackCard: {
+    border: "1px solid #e2e8f0",
+    borderRadius: 28,
+    padding: 20,
+    background: "rgba(255,255,255,0.92)",
+    boxShadow: "0 22px 60px rgba(15,23,42,0.07)",
+  },
+  feedbackTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 16,
+    alignItems: "flex-start",
+  },
+  feedbackTitle: {
+    margin: "10px 0 0",
+    fontSize: 26,
+    letterSpacing: "-0.045em",
+  },
+  ratingLine: {
+    marginTop: 16,
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    border: "1px solid #e2e8f0",
+    borderRadius: 18,
+    padding: 14,
+    background: "#f8fafc",
+  },
+  messageBox: {
+    margin: "14px 0 0",
+    color: "#334155",
+    lineHeight: 1.7,
+  },
+  replyBox: {
+    marginTop: 14,
+    border: "1px solid #bbf7d0",
+    borderRadius: 18,
+    padding: 14,
+    background: "#f0fdf4",
+    color: "#166534",
+  },
+  adminBox: {
+    marginTop: 14,
+    borderTop: "1px solid #e2e8f0",
+    paddingTop: 14,
+    display: "grid",
+    gap: 12,
+  },
+  footerRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: 16,
+  },
 };
 
 export default Feedback;
