@@ -6,12 +6,15 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Trainers from "./pages/Trainers";
 import Bookings from "./pages/Bookings";
-import WeeklyGoals from "./pages/WeeklyGoals";
+import WeeklyGoals from "./pages/weeklyGoals";
 import Feedback from "./pages/Feedback";
 import TrainerMatching from "./pages/TrainerMatching";
 import Progress from "./pages/Progress";
 import Notifications from "./pages/Notifications";
 import SocialFeed from "./pages/SocialFeed";
+import AdminAnalytics from "./pages/AdminAnalytics";
+import Memberships from "./pages/Memberships";
+import ManualBkashPayments from "./pages/ManualBkashPayments";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -101,6 +104,33 @@ function App() {
         element={
           <ProtectedRoute>
             <SocialFeed />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin-analytics"
+        element={
+          <ProtectedRoute>
+            <AdminAnalytics />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/memberships"
+        element={
+          <ProtectedRoute>
+            <Memberships />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/manual-bkash-payments"
+        element={
+          <ProtectedRoute>
+            <ManualBkashPayments />
           </ProtectedRoute>
         }
       />

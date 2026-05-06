@@ -44,6 +44,17 @@ const Navbar = () => {
           Progress
         </Link>
 
+        <Link to="/memberships" style={linkStyle("/memberships")}>
+          Memberships
+        </Link>
+
+        <Link
+          to="/manual-bkash-payments"
+          style={linkStyle("/manual-bkash-payments")}
+        >
+          bKash Payments
+        </Link>
+
         <Link to="/social-feed" style={linkStyle("/social-feed")}>
           Social Feed
         </Link>
@@ -57,6 +68,12 @@ const Navbar = () => {
         <Link to="/notifications" style={linkStyle("/notifications")}>
           Notifications
         </Link>
+
+        {user?.role === "admin" && (
+          <Link to="/admin-analytics" style={linkStyle("/admin-analytics")}>
+            Admin Analytics
+          </Link>
+        )}
 
         <Link to="/feedback" style={linkStyle("/feedback")}>
           Feedback
