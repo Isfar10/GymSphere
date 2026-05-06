@@ -12,9 +12,7 @@ const progressRoutes = require("./routes/progressRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const socialPostRoutes = require("./routes/socialPostRoutes");
 const adminAnalyticsRoutes = require("./routes/adminAnalyticsRoutes");
-
-const socialPostRoutes = require("./routes/socialPostRoutes");
-
+const membershipRoutes = require("./routes/membershipRoutes");
 
 const app = express();
 
@@ -37,8 +35,6 @@ app.use("/api/progress", progressRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/social-feed", socialPostRoutes);
 app.use("/api/admin/analytics", adminAnalyticsRoutes);
-
-app.use("/api/social-feed", socialPostRoutes);
-
+app.use("/api/memberships", membershipRoutes);
 
 module.exports = app;
