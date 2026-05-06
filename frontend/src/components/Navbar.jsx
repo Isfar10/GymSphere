@@ -48,12 +48,14 @@ const Navbar = () => {
           Memberships
         </Link>
 
+
         <Link
           to="/manual-bkash-payments"
           style={linkStyle("/manual-bkash-payments")}
         >
           bKash Payments
         </Link>
+
 
         <Link to="/social-feed" style={linkStyle("/social-feed")}>
           Social Feed

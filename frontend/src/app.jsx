@@ -14,7 +14,9 @@ import Notifications from "./pages/Notifications";
 import SocialFeed from "./pages/SocialFeed";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import Memberships from "./pages/Memberships";
+
 import ManualBkashPayments from "./pages/ManualBkashPayments";
+
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -127,6 +129,7 @@ function App() {
       />
 
       <Route
+
         path="/manual-bkash-payments"
         element={
           <ProtectedRoute>
@@ -136,6 +139,7 @@ function App() {
       />
 
       <Route
+
         path="/feedback"
         element={
           <ProtectedRoute>
