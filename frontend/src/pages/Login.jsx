@@ -24,7 +24,7 @@ function Login() {
   };
 
   const validateForm = () => {
-    if (!formData.email || !formData.password) {
+    if (!formData.email.trim() || !formData.password.trim()) {
       return "Please fill in all fields.";
     }
 
@@ -48,7 +48,13 @@ function Login() {
 
     try {
       setLoading(true);
-      await login(formData);
+
+      try {
+        await login(formData);
+      } catch (firstError) {
+        await login(formData.email, formData.password);
+      }
+
       navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
@@ -79,19 +85,19 @@ function Login() {
 
         <div style={styles.featureGrid}>
           <div style={styles.featureCard}>
-            <span>🥗</span>
+            <span style={styles.featureIcon}>🥗</span>
             <strong>Smart Diet</strong>
             <small>Database-backed meal plans</small>
           </div>
 
           <div style={styles.featureCard}>
-            <span>📅</span>
+            <span style={styles.featureIcon}>📅</span>
             <strong>Bookings</strong>
             <small>Manage trainer sessions</small>
           </div>
 
           <div style={styles.featureCard}>
-            <span>🎯</span>
+            <span style={styles.featureIcon}>🎯</span>
             <strong>Goals</strong>
             <small>Track weekly progress</small>
           </div>
@@ -243,6 +249,9 @@ const styles = {
     backdropFilter: "blur(14px)",
     display: "grid",
     gap: "5px",
+  },
+  featureIcon: {
+    fontSize: "26px",
   },
   formPanel: {
     display: "grid",
