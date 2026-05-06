@@ -14,6 +14,8 @@ const socialPostRoutes = require("./routes/socialPostRoutes");
 const adminAnalyticsRoutes = require("./routes/adminAnalyticsRoutes");
 const membershipRoutes = require("./routes/membershipRoutes");
 
+const manualBkashPaymentRoutes = require("./routes/manualBkashPaymentRoutes");
+
 const app = express();
 
 app.use(cors());
@@ -36,5 +38,8 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/social-feed", socialPostRoutes);
 app.use("/api/admin/analytics", adminAnalyticsRoutes);
 app.use("/api/memberships", membershipRoutes);
+
+app.use("/api/manual-bkash-payments", manualBkashPaymentRoutes);
+
 
 module.exports = app;
