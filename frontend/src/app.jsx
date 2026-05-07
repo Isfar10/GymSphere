@@ -1,4 +1,4 @@
-```import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -6,20 +6,24 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import Trainers from "./pages/Trainers";
 import Bookings from "./pages/Bookings";
-import WeeklyGoals from "./pages/WeeklyGoals";
+import WeeklyGoals from "./pages/weeklyGoals";
 import Feedback from "./pages/Feedback";
 import TrainerMatching from "./pages/TrainerMatching";
 import Progress from "./pages/Progress";
 import Notifications from "./pages/Notifications";
 import SocialFeed from "./pages/SocialFeed";
 import AdminAnalytics from "./pages/AdminAnalytics";
+import Memberships from "./pages/Memberships";
+import ManualBkashPayments from "./pages/ManualBkashPayments";
+import DietPlans from "./pages/DietPlans";
+import Store from "./pages/Store";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route path="/login" element={<Login />} />
 
@@ -80,6 +84,51 @@ function App() {
       />
 
       <Route
+        path="/diet-plans"
+        element={
+          <ProtectedRoute>
+            <DietPlans />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/memberships"
+        element={
+          <ProtectedRoute>
+            <Memberships />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/manual-bkash-payments"
+        element={
+          <ProtectedRoute>
+            <ManualBkashPayments />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/store"
+        element={
+          <ProtectedRoute>
+            <Store />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/social-feed"
+        element={
+          <ProtectedRoute>
+            <SocialFeed />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/trainer-matching"
         element={
           <ProtectedRoute>
@@ -93,15 +142,6 @@ function App() {
         element={
           <ProtectedRoute>
             <Notifications />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/social-feed"
-        element={
-          <ProtectedRoute>
-            <SocialFeed />
           </ProtectedRoute>
         }
       />
@@ -123,10 +163,8 @@ function App() {
           </ProtectedRoute>
         }
       />
-
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }
 
-export default App;```
+export default App;
