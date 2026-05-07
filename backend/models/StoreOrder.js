@@ -58,6 +58,38 @@ const storeOrderSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
+    paymentMethod: {
+      type: String,
+      enum: ["manual_bkash"],
+      default: "manual_bkash",
+    },
+    bkashNumber: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    transactionId: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    adminPaymentNote: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    paymentVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+
     status: {
       type: String,
       enum: ["pending", "confirmed", "delivered", "cancelled"],
