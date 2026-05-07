@@ -1,10 +1,11 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
 const User = require("../models/User");
 
 const createToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
-    expiresIn: "7d"
+    expiresIn: "7d",
   });
 };
 
@@ -19,7 +20,6 @@ const formatUserResponse = (user) => {
     height: user.height,
     weight: user.weight,
 
-    // Trainer fields
     bio: user.bio,
     specializations: user.specializations,
     certifications: user.certifications,
@@ -29,8 +29,7 @@ const formatUserResponse = (user) => {
     rating: user.rating,
     reviewCount: user.reviewCount,
     isProfileComplete: user.isProfileComplete,
-
-    createdAt: user.createdAt
+    createdAt: user.createdAt,
   };
 };
 
@@ -41,16 +40,27 @@ const registerUser = async (req, res) => {
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Name, email, and password are required"
+        message: "Name, email, and password are required",
       });
     }
 
-    const existingUser = await User.findOne({ email });
+    const requestedRole = role || "trainee";
+
+    if (!["trainee", "trainer"].includes(requestedRole)) {
+      return res.status(403).json({
+        success: false,
+        message: "Admin accounts cannot be created from registration.",
+      });
+    }
+
+    const existingUser = await User.findOne({
+      email: String(email).trim().toLowerCase(),
+    });
 
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: "User already exists"
+        message: "User already exists",
       });
     }
 
@@ -60,7 +70,7 @@ const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: role || "trainee"
+      role: requestedRole,
     });
 
     const token = createToken(user._id);
@@ -69,12 +79,12 @@ const registerUser = async (req, res) => {
       success: true,
       message: "User registered successfully",
       token,
-      user: formatUserResponse(user)
+      user: formatUserResponse(user),
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -86,16 +96,18 @@ const loginUser = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required"
+        message: "Email and password are required",
       });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      email: String(email).trim().toLowerCase(),
+    });
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials"
+        message: "Invalid credentials",
       });
     }
 
@@ -104,7 +116,7 @@ const loginUser = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials"
+        message: "Invalid credentials",
       });
     }
 
@@ -114,12 +126,12 @@ const loginUser = async (req, res) => {
       success: true,
       message: "Login successful",
       token,
-      user: formatUserResponse(user)
+      user: formatUserResponse(user),
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -131,18 +143,18 @@ const getMe = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: "User not found",
       });
     }
 
     return res.status(200).json({
       success: true,
-      user: formatUserResponse(user)
+      user: formatUserResponse(user),
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -150,5 +162,5 @@ const getMe = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
-  getMe
+  getMe,
 };

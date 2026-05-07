@@ -23,8 +23,6 @@ const navItems = [
     roles: ["admin", "trainer", "trainee"],
   },
   {
-
-
     label: "Weekly Goals",
     path: "/weekly-goals",
     roles: ["trainer", "trainee"],
@@ -129,54 +127,13 @@ function Navbar() {
               <span style={styles.avatar}>
                 {user.name?.[0]?.toUpperCase() || "U"}
               </span>
+
               <span style={styles.userMeta}>
                 <strong>{user.name || "User"}</strong>
                 <small>{role}</small>
               </span>
             </div>
           )}
-
-
-
-  return (
-    <header style={styles.header}>
-      <nav style={styles.nav}>
-        <Link to="/dashboard" style={styles.brand}>
-          <span style={styles.logoMark}>G</span>
-          <span>
-            <strong style={styles.brandName}>GymSphere</strong>
-            <small style={styles.brandSub}>Fitness ecosystem</small>
-          </span>
-        </Link>
-
-        <div style={styles.links}>
-          {visibleItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              style={{
-                ...styles.link,
-                ...(isActive(item.path) ? styles.activeLink : {}),
-              }}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-
-        <div style={styles.right}>
-          {user && (
-            <div style={styles.userChip}>
-              <span style={styles.avatar}>
-                {user.name?.[0]?.toUpperCase() || "U"}
-              </span>
-              <span style={styles.userMeta}>
-                <strong>{user.name || "User"}</strong>
-                <small>{role}</small>
-              </span>
-            </div>
-          )}
-
 
           <button type="button" onClick={handleLogout} style={styles.logoutButton}>
             Logout

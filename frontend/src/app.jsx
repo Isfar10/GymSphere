@@ -16,9 +16,7 @@ import AdminAnalytics from "./pages/AdminAnalytics";
 import Memberships from "./pages/Memberships";
 import ManualBkashPayments from "./pages/ManualBkashPayments";
 import DietPlans from "./pages/DietPlans";
-
 import Store from "./pages/Store";
-
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -28,6 +26,7 @@ function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route path="/login" element={<Login />} />
+
       <Route path="/register" element={<Register />} />
 
       <Route
@@ -62,6 +61,15 @@ function App() {
         element={
           <ProtectedRoute>
             <Bookings />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/store"
+        element={
+          <ProtectedRoute>
+            <Store />
           </ProtectedRoute>
         }
       />
@@ -112,15 +120,6 @@ function App() {
       />
 
       <Route
-        path="/store"
-        element={
-          <ProtectedRoute>
-            <Store />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
         path="/social-feed"
         element={
           <ProtectedRoute>
@@ -157,33 +156,6 @@ function App() {
       />
 
       <Route
-        path="/memberships"
-        element={
-          <ProtectedRoute>
-            <Memberships />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/manual-bkash-payments"
-        element={
-          <ProtectedRoute>
-            <ManualBkashPayments />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/diet-plans"
-        element={
-          <ProtectedRoute>
-            <DietPlans />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
         path="/feedback"
         element={
           <ProtectedRoute>
@@ -191,6 +163,8 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

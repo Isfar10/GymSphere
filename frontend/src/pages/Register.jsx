@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+
 import { useAuth } from "../context/AuthContext";
 
 function Register() {
@@ -38,6 +39,10 @@ function Register() {
       return "Password must be at least 6 characters.";
     }
 
+    if (!["trainee", "trainer"].includes(formData.role)) {
+      return "Please select trainee or trainer.";
+    }
+
     return "";
   };
 
@@ -54,7 +59,12 @@ function Register() {
 
     try {
       setLoading(true);
-      await register(formData);
+
+      await register({
+        ...formData,
+        role: formData.role === "trainer" ? "trainer" : "trainee",
+      });
+
       navigate("/dashboard");
     } catch (err) {
       setError(
@@ -70,6 +80,7 @@ function Register() {
       <section style={styles.leftPanel}>
         <div style={styles.brand}>
           <span style={styles.logoMark}>G</span>
+
           <div>
             <strong style={styles.brandName}>GymSphere</strong>
             <p style={styles.brandSub}>Train smarter, live stronger</p>
@@ -78,31 +89,25 @@ function Register() {
 
         <div style={styles.heroContent}>
           <p style={styles.eyebrow}>Join GymSphere</p>
+
           <h1 style={styles.heroTitle}>Create your fitness command center.</h1>
+
           <p style={styles.heroText}>
-            Register as a trainee, trainer, or admin and unlock a complete
-            fitness platform with bookings, diet plans, goals, payments, and
+            Register as a trainee or trainer and unlock a complete fitness
+            platform with bookings, diet plans, goals, payments, store, and
             community features.
           </p>
         </div>
 
         <div style={styles.rolePreview}>
           <div style={styles.roleCard}>
-            <span>🏃</span>
             <strong>Trainee</strong>
-            <small>Book trainers and track progress.</small>
+            <span>Book trainers and track progress.</span>
           </div>
 
           <div style={styles.roleCard}>
-            <span>🧑‍🏫</span>
             <strong>Trainer</strong>
-            <small>Manage clients and sessions.</small>
-          </div>
-
-          <div style={styles.roleCard}>
-            <span>📊</span>
-            <strong>Admin</strong>
-            <small>Monitor platform activity.</small>
+            <span>Manage clients and sessions.</span>
           </div>
         </div>
       </section>
@@ -111,7 +116,9 @@ function Register() {
         <div style={styles.formCard}>
           <div style={styles.formHeader}>
             <p style={styles.formKicker}>New Account</p>
+
             <h2 style={styles.formTitle}>Start strong today</h2>
+
             <p style={styles.formSubtitle}>
               Create your account and enter your GymSphere dashboard.
             </p>
@@ -126,8 +133,8 @@ function Register() {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                placeholder="Your name"
                 style={styles.input}
+                placeholder="Enter your full name"
               />
             </label>
 
@@ -138,8 +145,8 @@ function Register() {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="you@example.com"
                 style={styles.input}
+                placeholder="you@example.com"
               />
             </label>
 
@@ -150,8 +157,8 @@ function Register() {
                 type="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Minimum 6 characters"
                 style={styles.input}
+                placeholder="Minimum 6 characters"
               />
             </label>
 
@@ -165,7 +172,6 @@ function Register() {
               >
                 <option value="trainee">Trainee</option>
                 <option value="trainer">Trainer</option>
-                <option value="admin">Admin</option>
               </select>
             </label>
 
@@ -259,7 +265,7 @@ const styles = {
   },
   rolePreview: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: "14px",
   },
   roleCard: {
