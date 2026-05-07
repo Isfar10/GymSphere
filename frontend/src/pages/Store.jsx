@@ -4,6 +4,8 @@ import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
 
+const STORE_BKASH_NUMBER = "01XXXXXXXXX";
+
 const emptyProductForm = {
   name: "",
   category: "supplement",
@@ -25,9 +27,12 @@ function Store() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [checkoutForm, setCheckoutForm] = useState({
     customerName: user?.name || "",
-    phone: "",
+    phone: user?.phone || user?.phoneNumber || "",
     address: "",
+    bkashNumber: user?.phone || user?.phoneNumber || "",
+    transactionId: "",
   });
+  const [adminPaymentNote, setAdminPaymentNote] = useState({});
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
@@ -225,9 +230,13 @@ function Store() {
     if (
       !checkoutForm.customerName.trim() ||
       !checkoutForm.phone.trim() ||
-      !checkoutForm.address.trim()
+      !checkoutForm.address.trim() ||
+      !checkoutForm.bkashNumber.trim() ||
+      !checkoutForm.transactionId.trim()
     ) {
-      setError("Name, phone, and address are required.");
+      setError(
+        "Name, phone, delivery address, bKash number, and transaction ID are required."
+      );
       return;
     }
 
@@ -244,9 +253,15 @@ function Store() {
       });
 
       setCart([]);
+      setCheckoutForm((previous) => ({
+        ...previous,
+        address: "",
+        transactionId: "",
+      }));
+
       await fetchStore();
 
-      showSuccess("Order placed successfully.");
+      showSuccess("Order placed. Payment is waiting for admin approval.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to place order.");
     } finally {
@@ -270,6 +285,41 @@ function Store() {
     }
   };
 
+  const updateAdminPaymentNote = (orderId, value) => {
+    setAdminPaymentNote((previous) => ({
+      ...previous,
+      [orderId]: value,
+    }));
+  };
+
+  const updatePaymentStatus = async (orderId, paymentStatus) => {
+    try {
+      setActionLoading(true);
+      setError("");
+
+      await API.patch(`/store/orders/${orderId}/payment`, {
+        paymentStatus,
+        adminPaymentNote:
+          adminPaymentNote[orderId] ||
+          (paymentStatus === "approved"
+            ? "Store payment verified."
+            : "Store payment could not be verified."),
+      });
+
+      await fetchStore();
+
+      showSuccess(
+        paymentStatus === "approved"
+          ? "Payment approved and order confirmed."
+          : "Payment rejected and order cancelled."
+      );
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update payment.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -283,8 +333,8 @@ function Store() {
             </h1>
             <p style={styles.subtitle}>
               {isAdmin
-                ? "Add, update, activate, or deactivate supplements and gym equipment."
-                : "Buy whey protein, creatine, gym belts, arm grips, and other fitness essentials."}
+                ? "Add, update, activate, deactivate, and verify bKash payments for store orders."
+                : "Buy whey protein, creatine, gym belts, arm grips, and other fitness essentials with manual bKash payment."}
             </p>
           </div>
 
@@ -320,6 +370,24 @@ function Store() {
               />
               <StatBox label="Orders" value={orders.length} icon="📦" />
             </section>
+
+            {canBuy && (
+              <section style={styles.paymentNotice}>
+                <div>
+                  <p style={styles.eyebrow}>Store Payment</p>
+                  <h2 style={styles.noticeTitle}>Pay with manual bKash</h2>
+                  <p style={styles.noticeText}>
+                    Send the exact cart total to this bKash number, then submit
+                    your sender number and transaction ID during checkout.
+                  </p>
+                </div>
+
+                <div style={styles.bkashBox}>
+                  <span>Store bKash Number</span>
+                  <strong>{STORE_BKASH_NUMBER}</strong>
+                </div>
+              </section>
+            )}
 
             <section style={styles.filterRow}>
               <button
@@ -539,7 +607,7 @@ function Store() {
 
             {canBuy && (
               <section style={styles.card}>
-                <h2 style={styles.sectionTitle}>My Cart</h2>
+                <h2 style={styles.sectionTitle}>My Cart & Payment</h2>
 
                 {cart.length === 0 ? (
                   <div style={styles.emptyBox}>Your cart is empty.</div>
@@ -582,8 +650,15 @@ function Store() {
                     </div>
 
                     <div style={styles.totalRow}>
-                      <span>Total</span>
+                      <span>Total to Pay</span>
                       <strong>{formatCurrency(cartTotal)}</strong>
+                    </div>
+
+                    <div style={styles.payInstruction}>
+                      <strong>Payment instruction:</strong> Send{" "}
+                      <strong>{formatCurrency(cartTotal)}</strong> to{" "}
+                      <strong>{STORE_BKASH_NUMBER}</strong>, then enter your
+                      sender bKash number and transaction ID below.
                     </div>
 
                     <form onSubmit={placeOrder} style={styles.checkoutForm}>
@@ -609,6 +684,28 @@ function Store() {
                       </label>
 
                       <label style={styles.label}>
+                        Sender bKash Number
+                        <input
+                          name="bkashNumber"
+                          value={checkoutForm.bkashNumber}
+                          onChange={handleCheckoutChange}
+                          style={styles.input}
+                          placeholder="01XXXXXXXXX"
+                        />
+                      </label>
+
+                      <label style={styles.label}>
+                        bKash Transaction ID
+                        <input
+                          name="transactionId"
+                          value={checkoutForm.transactionId}
+                          onChange={handleCheckoutChange}
+                          style={styles.input}
+                          placeholder="Example: A1B2C3D4E5"
+                        />
+                      </label>
+
+                      <label style={styles.label}>
                         Delivery Address
                         <textarea
                           name="address"
@@ -624,7 +721,7 @@ function Store() {
                         disabled={actionLoading}
                         style={styles.primaryButton}
                       >
-                        Place Order
+                        Submit Paid Order
                       </button>
                     </form>
                   </>
@@ -661,11 +758,76 @@ function Store() {
                             .join(", ")}
                         </p>
 
+                        <p style={styles.muted}>
+                          bKash: {order.bkashNumber || "N/A"} • TrxID:{" "}
+                          {order.transactionId || "N/A"}
+                        </p>
+
+                        {order.adminPaymentNote && (
+                          <p style={styles.muted}>
+                            Admin Note: {order.adminPaymentNote}
+                          </p>
+                        )}
+
                         <strong>{formatCurrency(order.totalAmount)}</strong>
                       </div>
 
                       <div style={styles.orderStatusBox}>
-                        <span style={styles.statusBadge}>{order.status}</span>
+                        <span
+                          style={{
+                            ...styles.statusBadge,
+                            ...(order.paymentStatus === "approved"
+                              ? styles.approvedBadge
+                              : {}),
+                            ...(order.paymentStatus === "rejected"
+                              ? styles.rejectedBadge
+                              : {}),
+                          }}
+                        >
+                          Payment: {order.paymentStatus || "pending"}
+                        </span>
+
+                        <span style={styles.statusBadge}>
+                          Order: {order.status}
+                        </span>
+
+                        {isAdmin && order.paymentStatus === "pending" && (
+                          <>
+                            <input
+                              value={adminPaymentNote[order._id] || ""}
+                              onChange={(event) =>
+                                updateAdminPaymentNote(
+                                  order._id,
+                                  event.target.value
+                                )
+                              }
+                              placeholder="Admin payment note"
+                              style={styles.input}
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updatePaymentStatus(order._id, "approved")
+                              }
+                              disabled={actionLoading}
+                              style={styles.primaryButton}
+                            >
+                              Approve Payment
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updatePaymentStatus(order._id, "rejected")
+                              }
+                              disabled={actionLoading}
+                              style={styles.dangerButton}
+                            >
+                              Reject Payment
+                            </button>
+                          </>
+                        )}
 
                         {isAdmin && (
                           <select
@@ -803,6 +965,37 @@ const styles = {
   statValue: {
     margin: 0,
     fontSize: "28px",
+  },
+  paymentNotice: {
+    border: "1px solid #bbf7d0",
+    borderRadius: "26px",
+    padding: "20px",
+    background: "#f0fdf4",
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "18px",
+    alignItems: "center",
+    marginBottom: "18px",
+  },
+  noticeTitle: {
+    margin: 0,
+    fontSize: "26px",
+    color: "#166534",
+  },
+  noticeText: {
+    margin: "8px 0 0",
+    color: "#166534",
+    lineHeight: 1.6,
+  },
+  bkashBox: {
+    minWidth: "220px",
+    borderRadius: "20px",
+    background: "#ffffff",
+    border: "1px solid #bbf7d0",
+    padding: "16px",
+    display: "grid",
+    gap: "5px",
+    color: "#166534",
   },
   filterRow: {
     display: "flex",
@@ -1017,6 +1210,15 @@ const styles = {
     fontSize: "20px",
     fontWeight: 950,
   },
+  payInstruction: {
+    marginTop: "12px",
+    border: "1px solid #bbf7d0",
+    borderRadius: "16px",
+    padding: "14px",
+    background: "#ffffff",
+    color: "#166534",
+    lineHeight: 1.6,
+  },
   checkoutForm: {
     marginTop: "16px",
     display: "grid",
@@ -1044,16 +1246,24 @@ const styles = {
   orderStatusBox: {
     display: "grid",
     gap: "10px",
-    minWidth: "180px",
+    minWidth: "220px",
   },
   statusBadge: {
     justifySelf: "start",
     borderRadius: "999px",
     padding: "8px 12px",
-    background: "#dcfce7",
-    color: "#166534",
+    background: "#fef9c3",
+    color: "#854d0e",
     fontWeight: 950,
     textTransform: "capitalize",
+  },
+  approvedBadge: {
+    background: "#dcfce7",
+    color: "#166534",
+  },
+  rejectedBadge: {
+    background: "#fee2e2",
+    color: "#991b1b",
   },
 };
 

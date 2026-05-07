@@ -240,12 +240,39 @@ router.patch("/products/:id/toggle", protect, requireAdmin, async (req, res) => 
 
 router.post("/orders", protect, requireBuyer, async (req, res) => {
   try {
-    const { items, customerName, phone, address } = req.body;
+    const {
+      items,
+      customerName,
+      phone,
+      address,
+      bkashNumber,
+      transactionId,
+    } = req.body;
 
-    if (!items || !items.length || !customerName || !phone || !address) {
+    if (
+      !items ||
+      !items.length ||
+      !customerName ||
+      !phone ||
+      !address ||
+      !bkashNumber ||
+      !transactionId
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Cart items, name, phone, and address are required",
+        message:
+          "Cart items, name, phone, address, bKash number, and transaction ID are required",
+      });
+    }
+
+    const existingTransaction = await StoreOrder.findOne({
+      transactionId: String(transactionId).trim().toUpperCase(),
+    });
+
+    if (existingTransaction) {
+      return res.status(400).json({
+        success: false,
+        message: "This transaction ID has already been used",
       });
     }
 
@@ -263,6 +290,13 @@ router.post("/orders", protect, requireBuyer, async (req, res) => {
       }
 
       const quantity = Number(item.quantity || 1);
+
+      if (quantity < 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Quantity must be at least 1",
+        });
+      }
 
       if (quantity > product.stock) {
         return res.status(400).json({
@@ -293,11 +327,17 @@ router.post("/orders", protect, requireBuyer, async (req, res) => {
       customerName,
       phone,
       address,
+      bkashNumber,
+      transactionId: String(transactionId).trim().toUpperCase(),
+      paymentMethod: "manual_bkash",
+      paymentStatus: "pending",
+      status: "pending",
     });
 
     return res.status(201).json({
       success: true,
-      message: "Order placed successfully",
+      message:
+        "Order placed successfully. Payment is pending admin verification.",
       order,
     });
   } catch (error) {
@@ -344,15 +384,18 @@ router.get("/orders", protect, requireAdmin, async (req, res) => {
   }
 });
 
-router.patch("/orders/:id/status", protect, requireAdmin, async (req, res) => {
+router.patch("/orders/:id/payment", protect, requireAdmin, async (req, res) => {
   try {
-    const { status } = req.body;
+    const { paymentStatus, adminPaymentNote } = req.body;
 
-    const order = await StoreOrder.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true, runValidators: true }
-    );
+    if (!["approved", "rejected"].includes(paymentStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment status must be approved or rejected",
+      });
+    }
+
+    const order = await StoreOrder.findById(req.params.id);
 
     if (!order) {
       return res.status(404).json({
@@ -360,6 +403,69 @@ router.patch("/orders/:id/status", protect, requireAdmin, async (req, res) => {
         message: "Order not found",
       });
     }
+
+    order.paymentStatus = paymentStatus;
+    order.adminPaymentNote = adminPaymentNote || "";
+
+    if (paymentStatus === "approved") {
+      order.paymentVerifiedAt = new Date();
+      order.status = "confirmed";
+    }
+
+    if (paymentStatus === "rejected") {
+      order.paymentVerifiedAt = null;
+      order.status = "cancelled";
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      message:
+        paymentStatus === "approved"
+          ? "Payment approved and order confirmed"
+          : "Payment rejected and order cancelled",
+      order,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+router.patch("/orders/:id/status", protect, requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!["pending", "confirmed", "delivered", "cancelled"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order status",
+      });
+    }
+
+    const order = await StoreOrder.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (status === "confirmed" || status === "delivered") {
+      if (order.paymentStatus !== "approved") {
+        return res.status(400).json({
+          success: false,
+          message: "Approve payment before confirming or delivering this order",
+        });
+      }
+    }
+
+    order.status = status;
+    await order.save();
 
     return res.status(200).json({
       success: true,
