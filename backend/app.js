@@ -16,6 +16,11 @@ const membershipRoutes = require("./routes/membershipRoutes");
 
 const manualBkashPaymentRoutes = require("./routes/manualBkashPaymentRoutes");
 const dietPlanRoutes = require("./routes/dietPlanRoutes");
+const storeRoutes = require("./routes/storeRoutes");
+
+
+const manualBkashPaymentRoutes = require("./routes/manualBkashPaymentRoutes");
+const dietPlanRoutes = require("./routes/dietPlanRoutes");
 const app = express();
 
 app.use(cors());
@@ -26,7 +31,6 @@ app.get("/", (req, res) => {
 });
 
 app.use("/workout", workoutRoutes);
-
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
@@ -41,5 +45,11 @@ app.use("/api/memberships", membershipRoutes);
 
 app.use("/api/manual-bkash-payments", manualBkashPaymentRoutes);
 app.use("/api/diet-plans", dietPlanRoutes);
+app.use("/api/store", storeRoutes);
+
+
+app.use("/api/manual-bkash-payments", manualBkashPaymentRoutes);
+app.use("/api/diet-plans", dietPlanRoutes);
+
 
 module.exports = app;
