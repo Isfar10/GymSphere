@@ -1,6 +1,7 @@
 const WeeklyGoal = require("../models/WeeklyGoal");
 const User = require("../models/User");
-const createNotification = require("../utils/createNotification");
+
+const allowedRoles = ["trainee", "trainer"];
 
 const getMondayOfWeek = (dateString) => {
   const baseDate = dateString ? new Date(dateString) : new Date();
@@ -56,23 +57,35 @@ const formatGoal = (goal) => {
   };
 };
 
+const getCurrentUser = async (req) => {
+  return User.findById(req.user.userId).select("-password");
+};
+
+const requireGoalAccess = (currentUser, res) => {
+  if (!currentUser) {
+    res.status(404).json({
+      success: false,
+      message: "User not found",
+    });
+    return false;
+  }
+
+  if (!allowedRoles.includes(currentUser.role)) {
+    res.status(403).json({
+      success: false,
+      message: "Only trainees and trainers can access weekly goals",
+    });
+    return false;
+  }
+
+  return true;
+};
+
 const getMyWeeklyGoals = async (req, res) => {
   try {
-    const currentUser = await User.findById(req.user.userId).select("-password");
+    const currentUser = await getCurrentUser(req);
 
-    if (!currentUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    if (currentUser.role !== "trainee") {
-      return res.status(403).json({
-        success: false,
-        message: "Only trainees can access weekly goals",
-      });
-    }
+    if (!requireGoalAccess(currentUser, res)) return;
 
     const requestedWeekStart = req.query.weekStart
       ? getMondayOfWeek(req.query.weekStart)
@@ -139,26 +152,14 @@ const createWeeklyGoal = async (req, res) => {
     const { title, description, category, targetCount, unit, weekStart } =
       req.body;
 
-    const currentUser = await User.findById(req.user.userId).select("-password");
+    const currentUser = await getCurrentUser(req);
 
-    if (!currentUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    if (currentUser.role !== "trainee") {
-      return res.status(403).json({
-        success: false,
-        message: "Only trainees can create weekly goals",
-      });
-    }
+    if (!requireGoalAccess(currentUser, res)) return;
 
     if (!title || !targetCount) {
       return res.status(400).json({
         success: false,
-        message: "title and targetCount are required",
+        message: "Title and target count are required",
       });
     }
 
@@ -189,18 +190,6 @@ const createWeeklyGoal = async (req, res) => {
       "name email"
     );
 
-    await createNotification({
-      user: currentUser._id,
-      title: "Weekly goal created",
-      message: `Your weekly goal "${title}" has been created. Keep going!`,
-      type: "weekly_goal",
-      link: "/weekly-goals",
-      metadata: {
-        goalId: goal._id,
-        weekStart: normalizedWeekStart,
-      },
-    });
-
     return res.status(201).json({
       success: true,
       message: "Weekly goal created successfully",
@@ -219,21 +208,9 @@ const updateWeeklyGoal = async (req, res) => {
     const { title, description, category, targetCount, unit, weekStart } =
       req.body;
 
-    const currentUser = await User.findById(req.user.userId).select("-password");
+    const currentUser = await getCurrentUser(req);
 
-    if (!currentUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    if (currentUser.role !== "trainee") {
-      return res.status(403).json({
-        success: false,
-        message: "Only trainees can update weekly goals",
-      });
-    }
+    if (!requireGoalAccess(currentUser, res)) return;
 
     const goal = await WeeklyGoal.findById(req.params.id).populate(
       "trainee",
@@ -304,21 +281,9 @@ const updateWeeklyGoalProgress = async (req, res) => {
   try {
     const { completedCount, action } = req.body;
 
-    const currentUser = await User.findById(req.user.userId).select("-password");
+    const currentUser = await getCurrentUser(req);
 
-    if (!currentUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    if (currentUser.role !== "trainee") {
-      return res.status(403).json({
-        success: false,
-        message: "Only trainees can update weekly goal progress",
-      });
-    }
+    if (!requireGoalAccess(currentUser, res)) return;
 
     const goal = await WeeklyGoal.findById(req.params.id).populate(
       "trainee",
@@ -338,8 +303,6 @@ const updateWeeklyGoalProgress = async (req, res) => {
         message: "You can only update your own weekly goals",
       });
     }
-
-    const wasCompleted = goal.completedCount >= goal.targetCount;
 
     if (completedCount !== undefined) {
       goal.completedCount = Number(completedCount);
@@ -369,23 +332,6 @@ const updateWeeklyGoalProgress = async (req, res) => {
 
     await goal.save();
 
-    const isNowCompleted = goal.completedCount >= goal.targetCount;
-
-    if (!wasCompleted && isNowCompleted) {
-      await createNotification({
-        user: currentUser._id,
-        title: "Weekly goal completed",
-        message: `Great job! You completed your weekly goal "${goal.title}".`,
-        type: "weekly_goal",
-        link: "/weekly-goals",
-        metadata: {
-          goalId: goal._id,
-          completedCount: goal.completedCount,
-          targetCount: goal.targetCount,
-        },
-      });
-    }
-
     const updatedGoal = await WeeklyGoal.findById(goal._id).populate(
       "trainee",
       "name email"
@@ -406,7 +352,7 @@ const updateWeeklyGoalProgress = async (req, res) => {
 
 const deleteWeeklyGoal = async (req, res) => {
   try {
-    const currentUser = await User.findById(req.user.userId).select("-password");
+    const currentUser = await getCurrentUser(req);
 
     if (!currentUser) {
       return res.status(404).json({
