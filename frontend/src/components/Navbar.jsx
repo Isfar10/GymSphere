@@ -20,27 +20,27 @@ const navItems = [
   {
     label: "Weekly Goals",
     path: "/weekly-goals",
-    roles: ["admin", "trainer", "trainee"],
+    roles: ["trainer", "trainee"],
   },
   {
     label: "Progress",
     path: "/progress",
-    roles: ["admin", "trainer", "trainee"],
+    roles: ["trainer", "trainee"],
   },
   {
     label: "Diet Plans",
     path: "/diet-plans",
-    roles: ["admin", "trainer", "trainee"],
+    roles: ["trainer", "trainee"],
   },
   {
     label: "Memberships",
     path: "/memberships",
-    roles: ["admin", "trainer", "trainee"],
+    roles: ["admin", "trainee"],
   },
   {
     label: "bKash",
     path: "/manual-bkash-payments",
-    roles: ["admin", "trainer", "trainee"],
+    roles: ["admin", "trainee"],
   },
   {
     label: "Social Feed",

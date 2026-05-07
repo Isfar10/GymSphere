@@ -1,15 +1,53 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+
 import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
 
+const GYMSPHERE_BKASH_NUMBER = "01799089557";
+
+const DEFAULT_MEMBERSHIP_PLANS = [
+  {
+    id: "default-1-year",
+    name: "1 Year",
+    price: 20000,
+    durationDays: 365,
+    isDefaultPlan: true,
+  },
+  {
+    id: "default-6-month",
+    name: "6 Month",
+    price: 11000,
+    durationDays: 180,
+    isDefaultPlan: true,
+  },
+  {
+    id: "default-3-month",
+    name: "3 Month",
+    price: 6500,
+    durationDays: 90,
+    isDefaultPlan: true,
+  },
+  {
+    id: "default-1-month",
+    name: "1 Month",
+    price: 3000,
+    durationDays: 30,
+    isDefaultPlan: true,
+  },
+];
+
 function ManualBkashPayments() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
 
   const [plans, setPlans] = useState([]);
   const [myPayments, setMyPayments] = useState([]);
   const [adminPayments, setAdminPayments] = useState([]);
-  const [adminBkashNumber, setAdminBkashNumber] = useState("01XXXXXXXXX");
+  const [adminBkashNumber, setAdminBkashNumber] = useState(
+    GYMSPHERE_BKASH_NUMBER
+  );
   const [selectedPlanId, setSelectedPlanId] = useState("");
   const [bkashNumber, setBkashNumber] = useState("");
   const [transactionId, setTransactionId] = useState("");
@@ -22,14 +60,32 @@ function ManualBkashPayments() {
 
   const isAdmin = user?.role === "admin";
 
+  const userPhoneNumber =
+    user?.phone ||
+    user?.phoneNumber ||
+    user?.mobile ||
+    user?.mobileNumber ||
+    user?.bkashNumber ||
+    "";
+
+  const visiblePlans = plans.length > 0 ? plans : DEFAULT_MEMBERSHIP_PLANS;
+
   const selectedPlan = useMemo(() => {
-    return plans.find((plan) => String(plan.id) === String(selectedPlanId));
-  }, [plans, selectedPlanId]);
+    return visiblePlans.find(
+      (plan) => String(plan.id) === String(selectedPlanId)
+    );
+  }, [visiblePlans, selectedPlanId]);
 
   const paymentStats = useMemo(() => {
-    const pending = adminPayments.filter((payment) => payment.status === "pending").length;
-    const approved = adminPayments.filter((payment) => payment.status === "approved").length;
-    const rejected = adminPayments.filter((payment) => payment.status === "rejected").length;
+    const pending = adminPayments.filter(
+      (payment) => payment.status === "pending"
+    ).length;
+    const approved = adminPayments.filter(
+      (payment) => payment.status === "approved"
+    ).length;
+    const rejected = adminPayments.filter(
+      (payment) => payment.status === "rejected"
+    ).length;
 
     return { pending, approved, rejected };
   }, [adminPayments]);
@@ -45,15 +101,31 @@ function ManualBkashPayments() {
       ]);
 
       const fetchedPlans = plansResponse.data.plans || [];
+      const usablePlans =
+        fetchedPlans.length > 0 ? fetchedPlans : DEFAULT_MEMBERSHIP_PLANS;
+
       setPlans(fetchedPlans);
       setMyPayments(myPaymentsResponse.data.payments || []);
 
       if (myPaymentsResponse.data.adminBkashNumber) {
         setAdminBkashNumber(myPaymentsResponse.data.adminBkashNumber);
+      } else {
+        setAdminBkashNumber(GYMSPHERE_BKASH_NUMBER);
       }
 
-      if (!selectedPlanId && fetchedPlans.length > 0) {
-        setSelectedPlanId(fetchedPlans[0].id);
+      const planIdFromUrl = searchParams.get("planId");
+
+      if (
+        planIdFromUrl &&
+        usablePlans.some((plan) => String(plan.id) === String(planIdFromUrl))
+      ) {
+        setSelectedPlanId(planIdFromUrl);
+      } else if (!selectedPlanId && usablePlans.length > 0) {
+        setSelectedPlanId(usablePlans[0].id);
+      }
+
+      if (!bkashNumber && userPhoneNumber) {
+        setBkashNumber(userPhoneNumber);
       }
 
       if (isAdmin) {
@@ -68,9 +140,24 @@ function ManualBkashPayments() {
         }
       }
     } catch (err) {
+      const planIdFromUrl = searchParams.get("planId");
+
+      setPlans([]);
+      setAdminBkashNumber(GYMSPHERE_BKASH_NUMBER);
+
+      if (planIdFromUrl) {
+        setSelectedPlanId(planIdFromUrl);
+      } else if (!selectedPlanId) {
+        setSelectedPlanId(DEFAULT_MEMBERSHIP_PLANS[0].id);
+      }
+
+      if (!bkashNumber && userPhoneNumber) {
+        setBkashNumber(userPhoneNumber);
+      }
+
       setError(
         err.response?.data?.message ||
-          "Failed to load bKash payment data. Please try again."
+          "Failed to load bKash payment data. Showing default membership plans."
       );
     } finally {
       setLoading(false);
@@ -81,13 +168,19 @@ function ManualBkashPayments() {
     fetchData();
   }, [isAdmin, adminFilter]);
 
+  useEffect(() => {
+    if (!bkashNumber && userPhoneNumber) {
+      setBkashNumber(userPhoneNumber);
+    }
+  }, [userPhoneNumber, bkashNumber]);
+
   const showSuccess = (message) => {
     setSuccess(message);
     setTimeout(() => setSuccess(""), 2500);
   };
 
   const formatCurrency = (value) => {
-    return `৳${Number(value || 0).toLocaleString()}`;
+    return `${Number(value || 0).toLocaleString()} TK`;
   };
 
   const formatDate = (dateValue) => {
@@ -96,7 +189,7 @@ function ManualBkashPayments() {
   };
 
   const resetForm = () => {
-    setBkashNumber("");
+    setBkashNumber(userPhoneNumber || "");
     setTransactionId("");
   };
 
@@ -105,6 +198,13 @@ function ManualBkashPayments() {
 
     if (!selectedPlanId || !bkashNumber.trim() || !transactionId.trim()) {
       setError("Please select a plan and enter bKash number plus transaction ID.");
+      return;
+    }
+
+    if (selectedPlan?.isDefaultPlan) {
+      setError(
+        "This default plan is visible in the frontend, but it is not saved in the database yet. Login as admin and create these plans, or use Seed Default Plans if your backend supports it."
+      );
       return;
     }
 
@@ -120,6 +220,7 @@ function ManualBkashPayments() {
 
       resetForm();
       await fetchData();
+
       showSuccess("Payment submitted. Please wait for admin approval.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit payment.");
@@ -145,6 +246,7 @@ function ManualBkashPayments() {
       });
 
       await fetchData();
+
       showSuccess("Payment approved and membership activated.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to approve payment.");
@@ -165,6 +267,7 @@ function ManualBkashPayments() {
       });
 
       await fetchData();
+
       showSuccess("Payment rejected.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to reject payment.");
@@ -178,20 +281,20 @@ function ManualBkashPayments() {
       <Navbar />
 
       <main style={styles.page}>
-        <section style={styles.header}>
+        <header style={styles.header}>
           <div>
             <p style={styles.eyebrow}>Manual Payment</p>
             <h1 style={styles.title}>bKash Payment Verification</h1>
             <p style={styles.subtitle}>
               Send payment manually to the GymSphere bKash number, then submit
-              your transaction ID for admin verification.
+              your sender number and transaction ID for admin verification.
             </p>
           </div>
 
           <button type="button" onClick={fetchData} style={styles.refreshButton}>
             Refresh
           </button>
-        </section>
+        </header>
 
         {error && <div style={styles.errorBox}>{error}</div>}
         {success && <div style={styles.successBox}>{success}</div>}
@@ -200,7 +303,7 @@ function ManualBkashPayments() {
           <div style={styles.emptyBox}>Loading bKash payments...</div>
         ) : (
           <>
-            <section style={styles.instructionsCard}>
+            <section style={styles.card}>
               <h2 style={styles.sectionTitle}>How to Pay</h2>
 
               <div style={styles.stepsGrid}>
@@ -211,16 +314,13 @@ function ManualBkashPayments() {
 
                 <div style={styles.stepBox}>
                   <strong>2. Send Money</strong>
-                  <p>
-                    Send the exact amount to this bKash number:
-                    <br />
-                    <span style={styles.bkashNumber}>{adminBkashNumber}</span>
-                  </p>
+                  <p>Send the exact amount to this bKash number:</p>
+                  <h3 style={styles.bkashNumber}>{adminBkashNumber}</h3>
                 </div>
 
                 <div style={styles.stepBox}>
                   <strong>3. Submit Proof</strong>
-                  <p>Enter sender number and transaction ID below.</p>
+                  <p>Enter sender bKash number and transaction ID below.</p>
                 </div>
 
                 <div style={styles.stepBox}>
@@ -230,60 +330,58 @@ function ManualBkashPayments() {
               </div>
             </section>
 
-            <section style={styles.formCard}>
+            <section style={styles.card}>
               <h2 style={styles.sectionTitle}>Submit bKash Payment</h2>
 
-              <form onSubmit={submitPayment} style={styles.form}>
-                <div style={styles.formGrid}>
-                  <label style={styles.label}>
-                    Membership Plan
-                    <select
-                      value={selectedPlanId}
-                      onChange={(event) => setSelectedPlanId(event.target.value)}
-                      style={styles.input}
-                    >
-                      {plans.map((plan) => (
-                        <option key={plan.id} value={plan.id}>
-                          {plan.name} - {formatCurrency(plan.price)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+              <form onSubmit={submitPayment} style={styles.paymentForm}>
+                <label style={styles.label}>
+                  Membership Plan
+                  <select
+                    value={selectedPlanId}
+                    onChange={(event) => setSelectedPlanId(event.target.value)}
+                    style={styles.input}
+                  >
+                    {visiblePlans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.name} - {formatCurrency(plan.price)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-                  <label style={styles.label}>
-                    Sender bKash Number
-                    <input
-                      value={bkashNumber}
-                      onChange={(event) => setBkashNumber(event.target.value)}
-                      placeholder="01XXXXXXXXX"
-                      style={styles.input}
-                    />
-                  </label>
+                <label style={styles.label}>
+                  Sender bKash Number
+                  <input
+                    value={bkashNumber}
+                    onChange={(event) => setBkashNumber(event.target.value)}
+                    placeholder="Enter your bKash number"
+                    style={styles.input}
+                  />
+                </label>
 
-                  <label style={styles.label}>
-                    Transaction ID
-                    <input
-                      value={transactionId}
-                      onChange={(event) => setTransactionId(event.target.value)}
-                      placeholder="Example: A1B2C3D4E5"
-                      style={styles.input}
-                    />
-                  </label>
-                </div>
+                <label style={styles.label}>
+                  Transaction ID
+                  <input
+                    value={transactionId}
+                    onChange={(event) => setTransactionId(event.target.value)}
+                    placeholder="Example: A1B2C3D4E5"
+                    style={styles.input}
+                  />
+                </label>
 
                 {selectedPlan && (
                   <div style={styles.selectedPlanBox}>
                     <strong>{selectedPlan.name}</strong>
                     <p>
-                      Amount: <strong>{formatCurrency(selectedPlan.price)}</strong> •
-                      Duration: <strong>{selectedPlan.durationDays} days</strong>
+                      Amount: {formatCurrency(selectedPlan.price)} • Duration:{" "}
+                      {selectedPlan.durationDays} days
                     </p>
                   </div>
                 )}
 
                 <button
                   type="submit"
-                  disabled={actionLoading || plans.length === 0}
+                  disabled={actionLoading}
                   style={styles.primaryButton}
                 >
                   Submit Payment Proof
@@ -310,19 +408,22 @@ function ManualBkashPayments() {
                         <th style={styles.th}>Admin Note</th>
                       </tr>
                     </thead>
-
                     <tbody>
                       {myPayments.map((payment) => (
                         <tr key={payment.id}>
                           <td style={styles.td}>{payment.plan?.name}</td>
-                          <td style={styles.td}>{formatCurrency(payment.amount)}</td>
+                          <td style={styles.td}>
+                            {formatCurrency(payment.amount)}
+                          </td>
                           <td style={styles.td}>{payment.bkashNumber}</td>
                           <td style={styles.td}>{payment.transactionId}</td>
+                          <td style={styles.td}>{payment.status}</td>
                           <td style={styles.td}>
-                            <StatusBadge status={payment.status} />
+                            {formatDate(payment.createdAt)}
                           </td>
-                          <td style={styles.td}>{formatDate(payment.createdAt)}</td>
-                          <td style={styles.td}>{payment.adminNote || "N/A"}</td>
+                          <td style={styles.td}>
+                            {payment.adminNote || "N/A"}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -333,12 +434,17 @@ function ManualBkashPayments() {
 
             {isAdmin && (
               <section style={styles.adminSection}>
-                <div style={styles.adminHeader}>
-                  <div>
-                    <p style={styles.eyebrow}>Admin</p>
-                    <h2 style={styles.sectionTitle}>Verify bKash Payments</h2>
-                  </div>
+                <p style={styles.eyebrow}>Admin</p>
+                <h2 style={styles.sectionTitle}>Verify bKash Payments</h2>
 
+                <div style={styles.statsGrid}>
+                  <StatBox label="Pending" value={paymentStats.pending} />
+                  <StatBox label="Approved" value={paymentStats.approved} />
+                  <StatBox label="Rejected" value={paymentStats.rejected} />
+                </div>
+
+                <label style={styles.filterLabel}>
+                  Filter
                   <select
                     value={adminFilter}
                     onChange={(event) => setAdminFilter(event.target.value)}
@@ -348,13 +454,7 @@ function ManualBkashPayments() {
                     <option value="approved">Approved</option>
                     <option value="rejected">Rejected</option>
                   </select>
-                </div>
-
-                <div style={styles.statsGrid}>
-                  <StatCard label="Pending" value={paymentStats.pending} />
-                  <StatCard label="Approved" value={paymentStats.approved} />
-                  <StatCard label="Rejected" value={paymentStats.rejected} />
-                </div>
+                </label>
 
                 {adminPayments.length === 0 ? (
                   <div style={styles.emptyBox}>
@@ -363,71 +463,53 @@ function ManualBkashPayments() {
                 ) : (
                   <div style={styles.adminList}>
                     {adminPayments.map((payment) => (
-                      <article key={payment.id} style={styles.adminCard}>
-                        <div style={styles.adminCardTop}>
-                          <div>
-                            <h3 style={styles.paymentTitle}>
-                              {payment.user?.name} - {payment.plan?.name}
-                            </h3>
-                            <p style={styles.mutedText}>
-                              {payment.user?.email} • Submitted{" "}
-                              {formatDate(payment.createdAt)}
-                            </p>
-                          </div>
-
-                          <StatusBadge status={payment.status} />
+                      <article key={payment.id} style={styles.adminPaymentCard}>
+                        <div>
+                          <h3 style={styles.adminPaymentTitle}>
+                            {payment.user?.name} - {payment.plan?.name}
+                          </h3>
+                          <p style={styles.adminPaymentText}>
+                            {payment.user?.email} • Submitted{" "}
+                            {formatDate(payment.createdAt)}
+                          </p>
+                          <p style={styles.adminPaymentText}>
+                            Amount: {formatCurrency(payment.amount)} • Sender:{" "}
+                            {payment.bkashNumber} • Transaction ID:{" "}
+                            {payment.transactionId}
+                          </p>
+                          <p style={styles.adminPaymentText}>
+                            Status: <strong>{payment.status}</strong>
+                          </p>
                         </div>
 
-                        <div style={styles.detailGrid}>
-                          <Detail label="Amount" value={formatCurrency(payment.amount)} />
-                          <Detail label="Sender Number" value={payment.bkashNumber} />
-                          <Detail label="Transaction ID" value={payment.transactionId} />
-                          <Detail label="Admin Number" value={payment.adminBkashNumber} />
-                        </div>
+                        {payment.status === "pending" && (
+                          <div style={styles.adminActions}>
+                            <input
+                              value={adminNote[payment.id] || ""}
+                              onChange={(event) =>
+                                updateAdminNote(payment.id, event.target.value)
+                              }
+                              placeholder="Admin note"
+                              style={styles.input}
+                            />
 
-                        {payment.status === "pending" ? (
-                          <>
-                            <label style={styles.label}>
-                              Admin Note
-                              <textarea
-                                value={adminNote[payment.id] || ""}
-                                onChange={(event) =>
-                                  updateAdminNote(payment.id, event.target.value)
-                                }
-                                placeholder="Optional note for user"
-                                style={styles.textarea}
-                                rows="3"
-                              />
-                            </label>
+                            <button
+                              type="button"
+                              onClick={() => approvePayment(payment.id)}
+                              disabled={actionLoading}
+                              style={styles.primaryButton}
+                            >
+                              Approve
+                            </button>
 
-                            <div style={styles.actionRow}>
-                              <button
-                                type="button"
-                                onClick={() => approvePayment(payment.id)}
-                                disabled={actionLoading}
-                                style={styles.primaryButton}
-                              >
-                                Approve & Activate
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => rejectPayment(payment.id)}
-                                disabled={actionLoading}
-                                style={styles.dangerButton}
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <div style={styles.reviewBox}>
-                            <p>
-                              Reviewed by:{" "}
-                              <strong>{payment.reviewedBy?.name || "Admin"}</strong>
-                            </p>
-                            <p>Reviewed at: {formatDate(payment.reviewedAt)}</p>
-                            <p>Note: {payment.adminNote || "N/A"}</p>
+                            <button
+                              type="button"
+                              onClick={() => rejectPayment(payment.id)}
+                              disabled={actionLoading}
+                              style={styles.dangerButton}
+                            >
+                              Reject
+                            </button>
                           </div>
                         )}
                       </article>
@@ -443,48 +525,11 @@ function ManualBkashPayments() {
   );
 }
 
-function StatusBadge({ status }) {
-  const styleByStatus = {
-    pending: {
-      background: "#fef3c7",
-      color: "#92400e",
-    },
-    approved: {
-      background: "#dcfce7",
-      color: "#166534",
-    },
-    rejected: {
-      background: "#fee2e2",
-      color: "#991b1b",
-    },
-  };
-
+function StatBox({ label, value }) {
   return (
-    <span
-      style={{
-        ...styles.statusBadge,
-        ...(styleByStatus[status] || styleByStatus.pending),
-      }}
-    >
-      {status}
-    </span>
-  );
-}
-
-function StatCard({ label, value }) {
-  return (
-    <div style={styles.statCard}>
-      <p style={styles.cardLabel}>{label}</p>
+    <div style={styles.statBox}>
+      <p style={styles.statLabel}>{label}</p>
       <h3 style={styles.statValue}>{value}</h3>
-    </div>
-  );
-}
-
-function Detail({ label, value }) {
-  return (
-    <div style={styles.detailBox}>
-      <p style={styles.cardLabel}>{label}</p>
-      <strong>{value}</strong>
     </div>
   );
 }
@@ -558,7 +603,7 @@ const styles = {
     color: "#6b7280",
     background: "#f9fafb",
   },
-  instructionsCard: {
+  card: {
     border: "1px solid #e5e7eb",
     borderRadius: "20px",
     padding: "20px",
@@ -577,81 +622,62 @@ const styles = {
   },
   stepBox: {
     border: "1px solid #e5e7eb",
-    borderRadius: "16px",
+    borderRadius: "14px",
     padding: "16px",
     background: "#f9fafb",
   },
   bkashNumber: {
-    display: "inline-block",
-    marginTop: "6px",
+    margin: "8px 0 0",
     color: "#16a34a",
-    fontSize: "20px",
-    fontWeight: 900,
+    fontSize: "22px",
+    letterSpacing: "0.04em",
   },
-  formCard: {
-    border: "1px solid #e5e7eb",
-    borderRadius: "20px",
-    padding: "20px",
-    background: "#ffffff",
-    boxShadow: "0 10px 25px rgba(15, 23, 42, 0.06)",
-    marginBottom: "24px",
-  },
-  form: {
+  paymentForm: {
     display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
     gap: "14px",
-  },
-  formGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
-    gap: "14px",
+    alignItems: "end",
   },
   label: {
     display: "grid",
     gap: "8px",
-    color: "#374151",
     fontWeight: 800,
+    color: "#374151",
   },
   input: {
     border: "1px solid #d1d5db",
     borderRadius: "14px",
-    padding: "11px 12px",
+    padding: "12px",
     font: "inherit",
-  },
-  textarea: {
-    border: "1px solid #d1d5db",
-    borderRadius: "14px",
-    padding: "11px 12px",
-    font: "inherit",
-    resize: "vertical",
+    minHeight: "46px",
   },
   selectedPlanBox: {
     border: "1px solid #bbf7d0",
-    borderRadius: "16px",
-    padding: "14px",
+    borderRadius: "14px",
     background: "#f0fdf4",
     color: "#166534",
+    padding: "14px",
   },
   primaryButton: {
     border: "none",
     borderRadius: "999px",
     background: "#16a34a",
     color: "#ffffff",
-    padding: "11px 17px",
+    padding: "12px 18px",
     fontWeight: 900,
     cursor: "pointer",
-    justifySelf: "start",
   },
   dangerButton: {
     border: "1px solid #fecaca",
     borderRadius: "999px",
     background: "#ffffff",
     color: "#dc2626",
-    padding: "10px 15px",
+    padding: "11px 17px",
     fontWeight: 900,
     cursor: "pointer",
   },
   historySection: {
-    marginTop: "24px",
+    marginTop: "28px",
   },
   tableWrap: {
     overflowX: "auto",
@@ -676,100 +702,66 @@ const styles = {
     borderBottom: "1px solid #f3f4f6",
     color: "#374151",
     verticalAlign: "top",
-    whiteSpace: "nowrap",
-  },
-  statusBadge: {
-    borderRadius: "999px",
-    padding: "6px 10px",
-    fontSize: "12px",
-    fontWeight: 900,
-    textTransform: "capitalize",
   },
   adminSection: {
     marginTop: "34px",
     borderTop: "1px solid #e5e7eb",
     paddingTop: "28px",
   },
-  adminHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "16px",
-    alignItems: "flex-start",
-    marginBottom: "16px",
-  },
   statsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
     gap: "14px",
-    marginBottom: "20px",
+    marginBottom: "18px",
   },
-  statCard: {
+  statBox: {
     border: "1px solid #e5e7eb",
     borderRadius: "18px",
-    padding: "16px",
+    padding: "18px",
     background: "#ffffff",
     boxShadow: "0 10px 25px rgba(15, 23, 42, 0.06)",
   },
-  cardLabel: {
+  statLabel: {
     margin: 0,
     color: "#6b7280",
-    fontSize: "14px",
-    fontWeight: 700,
+    fontWeight: 800,
   },
   statValue: {
     margin: "8px 0 0",
-    fontSize: "26px",
+    fontSize: "28px",
+  },
+  filterLabel: {
+    display: "grid",
+    gap: "8px",
+    maxWidth: "260px",
+    fontWeight: 800,
+    marginBottom: "18px",
   },
   adminList: {
     display: "grid",
-    gap: "16px",
+    gap: "14px",
   },
-  adminCard: {
+  adminPaymentCard: {
     border: "1px solid #e5e7eb",
-    borderRadius: "20px",
-    padding: "20px",
+    borderRadius: "18px",
+    padding: "18px",
     background: "#ffffff",
-    boxShadow: "0 10px 25px rgba(15, 23, 42, 0.06)",
-  },
-  adminCardTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "16px",
-    alignItems: "flex-start",
-    marginBottom: "16px",
-  },
-  paymentTitle: {
-    margin: "0 0 6px",
-    fontSize: "21px",
-  },
-  mutedText: {
-    margin: 0,
-    color: "#6b7280",
-  },
-  detailGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-    gap: "12px",
-    marginBottom: "16px",
+    gap: "14px",
   },
-  detailBox: {
-    border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    padding: "12px",
-    background: "#f9fafb",
+  adminPaymentTitle: {
+    margin: "0 0 8px",
+    fontSize: "20px",
   },
-  actionRow: {
+  adminPaymentText: {
+    margin: "4px 0",
+    color: "#4b5563",
+  },
+  adminActions: {
     display: "flex",
     gap: "10px",
     flexWrap: "wrap",
-    marginTop: "12px",
-  },
-  reviewBox: {
-    border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    padding: "12px",
-    background: "#f9fafb",
-    color: "#374151",
+    alignItems: "center",
   },
 };
 

@@ -1,8 +1,72 @@
 import { Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
+
 import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
+
+const DEFAULT_MEMBERSHIP_PLANS = [
+  {
+    id: "default-1-year",
+    name: "1 Year",
+    description: "Best value yearly GymSphere membership.",
+    price: 20000,
+    durationDays: 365,
+    features: [
+      "Full gym access for 1 year",
+      "Best long-term value",
+      "Membership support included",
+    ],
+    isActive: true,
+    isPopular: true,
+    isDefaultPlan: true,
+  },
+  {
+    id: "default-6-month",
+    name: "6 Month",
+    description: "Half-year GymSphere membership plan.",
+    price: 11000,
+    durationDays: 180,
+    features: [
+      "Full gym access for 6 months",
+      "Flexible medium-term plan",
+      "Membership support included",
+    ],
+    isActive: true,
+    isPopular: false,
+    isDefaultPlan: true,
+  },
+  {
+    id: "default-3-month",
+    name: "3 Month",
+    description: "Quarterly GymSphere membership plan.",
+    price: 6500,
+    durationDays: 90,
+    features: [
+      "Full gym access for 3 months",
+      "Good starter package",
+      "Membership support included",
+    ],
+    isActive: true,
+    isPopular: false,
+    isDefaultPlan: true,
+  },
+  {
+    id: "default-1-month",
+    name: "1 Month",
+    description: "Monthly GymSphere membership plan.",
+    price: 3000,
+    durationDays: 30,
+    features: [
+      "Full gym access for 1 month",
+      "Easy short-term plan",
+      "Membership support included",
+    ],
+    isActive: true,
+    isPopular: false,
+    isDefaultPlan: true,
+  },
+];
 
 const emptyPlanForm = {
   name: "",
@@ -30,6 +94,8 @@ function Memberships() {
   const [success, setSuccess] = useState("");
 
   const isAdmin = user?.role === "admin";
+
+  const visiblePlans = plans.length > 0 ? plans : DEFAULT_MEMBERSHIP_PLANS;
   const activePlanId = currentSubscription?.plan?.id;
 
   const totalRevenue = useMemo(() => {
@@ -74,8 +140,9 @@ function Memberships() {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Failed to load membership data. Please try again."
+          "Failed to load membership data. Showing default plans."
       );
+      setPlans([]);
     } finally {
       setLoading(false);
     }
@@ -91,7 +158,7 @@ function Memberships() {
   };
 
   const formatCurrency = (value) => {
-    return `৳${Number(value || 0).toLocaleString()}`;
+    return `${Number(value || 0).toLocaleString()} TK`;
   };
 
   const formatDate = (dateValue) => {
@@ -101,7 +168,6 @@ function Memberships() {
 
   const getDaysLeft = (endDate) => {
     if (!endDate) return 0;
-
     const diff = new Date(endDate).getTime() - new Date().getTime();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   };
@@ -112,8 +178,8 @@ function Memberships() {
       setError("");
 
       await API.patch("/memberships/cancel");
-
       await fetchMembershipData();
+
       showSuccess("Membership cancelled successfully.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to cancel membership.");
@@ -128,8 +194,8 @@ function Memberships() {
       setError("");
 
       await API.post("/memberships/plans/seed");
-
       await fetchMembershipData();
+
       showSuccess("Default membership plans are ready.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to seed plans.");
@@ -154,6 +220,7 @@ function Memberships() {
 
   const handleEditPlan = (plan) => {
     setEditingPlanId(plan.id);
+
     setPlanForm({
       name: plan.name,
       description: plan.description,
@@ -213,8 +280,8 @@ function Memberships() {
       setError("");
 
       await API.patch(`/memberships/plans/${planId}/deactivate`);
-
       await fetchMembershipData();
+
       showSuccess("Membership plan deactivated.");
     } catch (err) {
       setError(
@@ -230,7 +297,7 @@ function Memberships() {
       <Navbar />
 
       <main style={styles.page}>
-        <section style={styles.header}>
+        <header style={styles.header}>
           <div>
             <p style={styles.eyebrow}>GymSphere Plans</p>
             <h1 style={styles.title}>Membership Subscriptions</h1>
@@ -247,7 +314,7 @@ function Memberships() {
           >
             Refresh
           </button>
-        </section>
+        </header>
 
         {error && <div style={styles.errorBox}>{error}</div>}
         {success && <div style={styles.successBox}>{success}</div>}
@@ -266,21 +333,17 @@ function Memberships() {
                       {currentSubscription.plan?.name} Plan
                     </h2>
                     <p style={styles.currentText}>
-                      Status: <strong>{currentSubscription.status}</strong> •
-                      Ends on{" "}
-                      <strong>{formatDate(currentSubscription.endDate)}</strong>{" "}
-                      •{" "}
-                      <strong>
-                        {getDaysLeft(currentSubscription.endDate)} days left
-                      </strong>
+                      Status: {currentSubscription.status} • Ends on{" "}
+                      {formatDate(currentSubscription.endDate)} •{" "}
+                      {getDaysLeft(currentSubscription.endDate)} days left
                     </p>
                   </>
                 ) : (
                   <>
                     <h2 style={styles.currentTitle}>No active membership</h2>
                     <p style={styles.currentText}>
-                      Select a plan and submit your bKash transaction ID for
-                      admin approval.
+                      Select one of the GymSphere membership plans below and
+                      submit your bKash transaction ID for admin approval.
                     </p>
                   </>
                 )}
@@ -302,10 +365,8 @@ function Memberships() {
               <div>
                 <h2 style={styles.noticeTitle}>Manual bKash Payment</h2>
                 <p style={styles.noticeText}>
-                  Since no bKash merchant account is connected, GymSphere uses
-                  manual bKash verification. Send payment to the displayed
-                  bKash number, submit your transaction ID, and wait for admin
-                  approval.
+                  Send payment to the GymSphere bKash number, submit your sender
+                  bKash number and transaction ID, then wait for admin approval.
                 </p>
               </div>
 
@@ -315,68 +376,57 @@ function Memberships() {
             </section>
 
             <section style={styles.planGrid}>
-              {plans.length === 0 ? (
-                <div style={styles.emptyBox}>
-                  <h3 style={styles.emptyTitle}>No active plans found</h3>
-                  <p style={styles.emptyText}>
-                    Ask an admin to create or seed membership plans.
-                  </p>
-                </div>
-              ) : (
-                plans.map((plan) => (
-                  <article
-                    key={plan.id}
-                    style={{
-                      ...styles.planCard,
-                      ...(plan.isPopular ? styles.popularCard : {}),
-                    }}
-                  >
-                    {plan.isPopular && (
-                      <span style={styles.popularBadge}>Most Popular</span>
-                    )}
+              {visiblePlans.map((plan) => (
+                <article
+                  key={plan.id}
+                  style={{
+                    ...styles.planCard,
+                    ...(plan.isPopular ? styles.popularCard : {}),
+                  }}
+                >
+                  {plan.isPopular && (
+                    <span style={styles.popularBadge}>Most Popular</span>
+                  )}
 
-                    <h2 style={styles.planName}>{plan.name}</h2>
-                    <p style={styles.planDescription}>{plan.description}</p>
+                  <h2 style={styles.planName}>{plan.name}</h2>
+                  <p style={styles.planDescription}>{plan.description}</p>
 
-                    <div style={styles.priceRow}>
-                      <span style={styles.price}>
-                        {formatCurrency(plan.price)}
-                      </span>
-                      <span style={styles.duration}>
-                        /{plan.durationDays} days
-                      </span>
-                    </div>
+                  <div style={styles.priceRow}>
+                    <span style={styles.price}>{formatCurrency(plan.price)}</span>
+                    <span style={styles.duration}>
+                      / {plan.durationDays} days
+                    </span>
+                  </div>
 
-                    <ul style={styles.featureList}>
-                      {(plan.features || []).map((feature) => (
-                        <li key={feature} style={styles.featureItem}>
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
+                  <ul style={styles.featureList}>
+                    {(plan.features || []).map((feature) => (
+                      <li key={feature} style={styles.featureItem}>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
 
-                    {activePlanId === plan.id ? (
-                      <button
-                        type="button"
-                        disabled
-                        style={{
-                          ...styles.primaryButton,
-                          ...styles.disabledButton,
-                        }}
-                      >
-                        Current Plan
-                      </button>
-                    ) : (
-                      <Link
-                        to="/manual-bkash-payments"
-                        style={styles.primaryLinkButton}
-                      >
-                        Pay with bKash
-                      </Link>
-                    )}
-                  </article>
-                ))
-              )}
+                  {activePlanId === plan.id ? (
+                    <button
+                      type="button"
+                      disabled
+                      style={{
+                        ...styles.primaryButton,
+                        ...styles.disabledButton,
+                      }}
+                    >
+                      Current Plan
+                    </button>
+                  ) : (
+                    <Link
+                      to={`/manual-bkash-payments?planId=${plan.id}`}
+                      style={styles.primaryLinkButton}
+                    >
+                      Pay with bKash
+                    </Link>
+                  )}
+                </article>
+              ))}
             </section>
 
             <section style={styles.historySection}>
@@ -397,15 +447,12 @@ function Memberships() {
                         <th style={styles.th}>End</th>
                       </tr>
                     </thead>
-
                     <tbody>
                       {history.map((subscription) => (
                         <tr key={subscription.id}>
                           <td style={styles.td}>{subscription.plan?.name}</td>
                           <td style={styles.td}>{subscription.status}</td>
-                          <td style={styles.td}>
-                            {subscription.paymentStatus}
-                          </td>
+                          <td style={styles.td}>{subscription.paymentStatus}</td>
                           <td style={styles.td}>
                             {formatCurrency(subscription.amountPaid)}
                           </td>
@@ -435,25 +482,19 @@ function Memberships() {
                     type="button"
                     onClick={handleSeedPlans}
                     disabled={actionLoading}
-                    style={styles.secondaryButton}
+                    style={styles.primaryButton}
                   >
                     Seed Default Plans
                   </button>
                 </div>
 
                 <div style={styles.adminStats}>
-                  <StatBox
-                    label="Total Subscriptions"
-                    value={allSubscriptions.length}
-                  />
+                  <StatBox label="Total Revenue" value={formatCurrency(totalRevenue)} />
                   <StatBox
                     label="Active Subscriptions"
                     value={activeSubscriptionCount}
                   />
-                  <StatBox
-                    label="Membership Revenue"
-                    value={formatCurrency(totalRevenue)}
-                  />
+                  <StatBox label="Total Plans" value={adminPlans.length} />
                 </div>
 
                 <form onSubmit={handleSavePlan} style={styles.formCard}>
@@ -469,7 +510,6 @@ function Memberships() {
                         value={planForm.name}
                         onChange={handlePlanFormChange}
                         style={styles.input}
-                        placeholder="Pro"
                       />
                     </label>
 
@@ -478,11 +518,9 @@ function Memberships() {
                       <input
                         name="price"
                         type="number"
-                        min="0"
                         value={planForm.price}
                         onChange={handlePlanFormChange}
                         style={styles.input}
-                        placeholder="999"
                       />
                     </label>
 
@@ -491,11 +529,9 @@ function Memberships() {
                       <input
                         name="durationDays"
                         type="number"
-                        min="1"
                         value={planForm.durationDays}
                         onChange={handlePlanFormChange}
                         style={styles.input}
-                        placeholder="30"
                       />
                     </label>
                   </div>
@@ -508,7 +544,6 @@ function Memberships() {
                       onChange={handlePlanFormChange}
                       style={styles.textarea}
                       rows="3"
-                      placeholder="Describe the membership plan..."
                     />
                   </label>
 
@@ -623,7 +658,6 @@ function Memberships() {
                           <th style={styles.th}>End</th>
                         </tr>
                       </thead>
-
                       <tbody>
                         {allSubscriptions.map((subscription) => (
                           <tr key={subscription.id}>
@@ -632,9 +666,7 @@ function Memberships() {
                               <br />
                               <small>{subscription.user?.email}</small>
                             </td>
-                            <td style={styles.td}>
-                              {subscription.plan?.name}
-                            </td>
+                            <td style={styles.td}>{subscription.plan?.name}</td>
                             <td style={styles.td}>{subscription.status}</td>
                             <td style={styles.td}>
                               {formatCurrency(subscription.amountPaid)}
@@ -737,13 +769,6 @@ const styles = {
     textAlign: "center",
     color: "#6b7280",
     background: "#f9fafb",
-  },
-  emptyTitle: {
-    margin: "0 0 8px",
-    color: "#111827",
-  },
-  emptyText: {
-    margin: 0,
   },
   currentCard: {
     border: "1px solid #e5e7eb",

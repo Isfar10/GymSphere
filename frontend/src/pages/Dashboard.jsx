@@ -1,13 +1,18 @@
 import { Link } from "react-router-dom";
+
 import Navbar from "../components/Navbar";
+
 import { useAuth } from "../context/AuthContext";
+
 import PageShell from "../components/PageShell";
+
 import StatCard from "../components/StatCard";
 
 function Dashboard() {
   const { user } = useAuth();
 
   const role = user?.role || "member";
+  const isAdmin = role === "admin";
 
   const quickActions = [
     {
@@ -20,7 +25,7 @@ function Dashboard() {
     {
       title: "Bookings",
       description: "Manage upcoming and past training sessions.",
-      icon: "📅",
+      icon: "🗓️",
       path: "/bookings",
       roles: ["trainee", "trainer", "admin"],
     },
@@ -29,35 +34,35 @@ function Dashboard() {
       description: "Generate database-backed personalized meal plans.",
       icon: "🥗",
       path: "/diet-plans",
-      roles: ["trainee", "trainer", "admin"],
+      roles: ["trainee", "trainer"],
     },
     {
       title: "Weekly Goals",
       description: "Set and complete weekly fitness targets.",
       icon: "🎯",
       path: "/weekly-goals",
-      roles: ["trainee", "trainer", "admin"],
+      roles: ["trainee", "trainer"],
     },
     {
       title: "Progress",
       description: "Track body metrics and performance improvements.",
       icon: "📈",
       path: "/progress",
-      roles: ["trainee", "trainer", "admin"],
+      roles: ["trainee", "trainer"],
     },
     {
       title: "Memberships",
       description: "Choose a membership plan and manage subscription.",
       icon: "💎",
       path: "/memberships",
-      roles: ["trainee", "trainer", "admin"],
+      roles: ["trainee", "admin"],
     },
     {
       title: "bKash Payments",
       description: "Submit and verify manual bKash payments.",
       icon: "💳",
       path: "/manual-bkash-payments",
-      roles: ["trainee", "trainer", "admin"],
+      roles: ["trainee", "admin"],
     },
     {
       title: "Social Feed",
@@ -80,11 +85,72 @@ function Dashboard() {
       path: "/admin-analytics",
       roles: ["admin"],
     },
+    {
+      title: "Feedback",
+      description: "Review complaints, recommendations, and user feedback.",
+      icon: "📝",
+      path: "/feedback",
+      roles: ["admin"],
+    },
   ];
 
   const visibleActions = quickActions.filter((action) =>
     action.roles.includes(role)
   );
+
+  const dashboardStats = isAdmin
+    ? [
+        {
+          icon: "👥",
+          label: "Users",
+          value: "Manage",
+          helper: "Platform accounts",
+        },
+        {
+          icon: "💳",
+          label: "Payment",
+          value: "bKash",
+          helper: "Manual verification",
+        },
+        {
+          icon: "💎",
+          label: "Memberships",
+          value: "Plans",
+          helper: "Subscription control",
+        },
+        {
+          icon: "📊",
+          label: "Analytics",
+          value: "Admin",
+          helper: "System insights",
+        },
+      ]
+    : [
+        {
+          icon: "🥗",
+          label: "Diet Planner",
+          value: "Database",
+          helper: "Food matching algorithm",
+        },
+        {
+          icon: "💳",
+          label: "Payment",
+          value: "bKash",
+          helper: "Manual verification",
+        },
+        {
+          icon: "🎯",
+          label: "Goals",
+          value: "Weekly",
+          helper: "Track completion",
+        },
+        {
+          icon: "🌍",
+          label: "Community",
+          value: "Social",
+          helper: "Share progress",
+        },
+      ];
 
   return (
     <>
@@ -96,50 +162,47 @@ function Dashboard() {
         subtitle="Your all-in-one fitness dashboard for training, nutrition, memberships, payments, community activity, and progress tracking."
         heroIcon="🏋️"
         actions={
-          <>
-            <Link to="/diet-plans" className="gs-button">
-              Generate Diet Plan
-            </Link>
-            <Link to="/bookings" className="gs-button-outline">
-              View Bookings
-            </Link>
-          </>
+          isAdmin ? (
+            <>
+              <Link to="/admin-analytics" className="gs-button">
+                View Analytics
+              </Link>
+
+              <Link to="/manual-bkash-payments" className="gs-button-outline">
+                Verify Payments
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/diet-plans" className="gs-button">
+                Generate Diet Plan
+              </Link>
+
+              <Link to="/bookings" className="gs-button-outline">
+                View Bookings
+              </Link>
+            </>
+          )
         }
       >
         <section className="gs-grid gs-grid-4">
-          <StatCard
-            icon="🥗"
-            label="Diet Planner"
-            value="Database"
-            helper="Food matching algorithm"
-          />
-
-          <StatCard
-            icon="💳"
-            label="Payment"
-            value="bKash"
-            helper="Manual verification"
-          />
-
-          <StatCard
-            icon="🎯"
-            label="Goals"
-            value="Weekly"
-            helper="Track completion"
-          />
-
-          <StatCard
-            icon="🌍"
-            label="Community"
-            value="Social"
-            helper="Share progress"
-          />
+          {dashboardStats.map((stat) => (
+            <StatCard
+              key={stat.label}
+              icon={stat.icon}
+              label={stat.label}
+              value={stat.value}
+              helper={stat.helper}
+            />
+          ))}
         </section>
 
         <section style={styles.profileStrip}>
           <div>
             <p style={styles.kicker}>Current Account</p>
+
             <h2 style={styles.accountTitle}>{user?.name || "User"}</h2>
+
             <p style={styles.muted}>
               {user?.email || "No email found"} •{" "}
               <strong style={styles.role}>{role}</strong>
@@ -154,6 +217,7 @@ function Dashboard() {
         <section style={styles.sectionHeader}>
           <div>
             <p style={styles.kicker}>Quick Access</p>
+
             <h2 style={styles.sectionTitle}>What do you want to do today?</h2>
           </div>
         </section>
@@ -162,8 +226,11 @@ function Dashboard() {
           {visibleActions.map((action) => (
             <Link key={action.path} to={action.path} style={styles.actionCard}>
               <span style={styles.actionIcon}>{action.icon}</span>
+
               <h3 style={styles.actionTitle}>{action.title}</h3>
+
               <p style={styles.actionDescription}>{action.description}</p>
+
               <span style={styles.actionCta}>Open →</span>
             </Link>
           ))}
