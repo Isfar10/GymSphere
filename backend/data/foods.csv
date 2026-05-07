@@ -1,0 +1,48 @@
+name,category,servingSize,calories,proteinGrams,carbsGrams,fatGrams,fiberGrams,sugarGrams,dietTags,allergens,mealTags
+Boiled Egg,protein,1 large egg,78,6,1,5,0,1,balanced|high_protein|low_carb,egg,breakfast|snack
+Egg White,protein,3 egg whites,51,11,1,0,0,1,balanced|high_protein|low_carb,egg,breakfast|snack
+Chicken Breast,protein,100g cooked,165,31,0,4,0,0,balanced|high_protein|low_carb,,lunch|dinner
+Chicken Curry,protein,1 cup,260,25,6,15,1,2,balanced|high_protein,,lunch|dinner
+Grilled Fish,protein,100g,180,26,0,8,0,0,balanced|high_protein|low_carb,fish,lunch|dinner
+Tuna,protein,100g,132,29,0,1,0,0,balanced|high_protein|low_carb,fish,lunch|dinner|snack
+Beef Lean,protein,100g cooked,250,26,0,15,0,0,balanced|high_protein|low_carb,,lunch|dinner
+Lentils Dal,protein,1 cup cooked,230,18,40,1,16,4,balanced|vegetarian|vegan,,lunch|dinner
+Chickpeas,protein,1 cup cooked,269,15,45,4,12,8,balanced|vegetarian|vegan,,lunch|dinner|snack
+Kidney Beans,protein,1 cup cooked,225,15,40,1,13,1,balanced|vegetarian|vegan,,lunch|dinner
+Tofu,protein,100g,144,17,3,9,2,1,balanced|vegetarian|vegan|high_protein,soy,lunch|dinner
+Paneer,protein,100g,265,18,6,20,0,2,balanced|vegetarian|high_protein,milk,lunch|dinner
+Greek Yogurt,protein,170g,100,17,6,0,0,6,balanced|vegetarian|high_protein,milk,breakfast|snack
+Milk Low Fat,dairy,1 cup,102,8,12,2,0,12,balanced|vegetarian,milk,breakfast|snack
+Soy Milk,dairy,1 cup,80,7,4,4,1,1,balanced|vegetarian|vegan,soy,breakfast|snack
+Brown Rice,carb,1 cup cooked,216,5,45,2,4,1,balanced|vegetarian|vegan,,lunch|dinner
+White Rice,carb,1 cup cooked,205,4,45,0,1,0,balanced|vegetarian|vegan,,lunch|dinner
+Roti,carb,1 medium,120,4,22,3,3,1,balanced|vegetarian|vegan,gluten,lunch|dinner|breakfast
+Whole Wheat Bread,carb,2 slices,160,8,28,2,4,4,balanced|vegetarian|vegan,gluten,breakfast|snack
+Oats,carb,50g dry,190,7,32,4,5,1,balanced|vegetarian|vegan,gluten,breakfast
+Sweet Potato,carb,150g,135,2,31,0,5,7,balanced|vegetarian|vegan,,lunch|dinner|snack
+Potato Boiled,carb,150g,130,3,30,0,3,1,balanced|vegetarian|vegan,,lunch|dinner
+Banana,fruit,1 medium,105,1,27,0,3,14,balanced|vegetarian|vegan,,breakfast|snack
+Apple,fruit,1 medium,95,0,25,0,4,19,balanced|vegetarian|vegan,,breakfast|snack
+Orange,fruit,1 medium,62,1,15,0,3,12,balanced|vegetarian|vegan,,breakfast|snack
+Dates,fruit,3 pieces,200,2,54,0,5,48,balanced|vegetarian|vegan,,snack
+Peanut Butter,fat,1 tbsp,95,4,3,8,1,1,balanced|vegetarian|vegan|high_protein,peanut,breakfast|snack
+Peanuts,fat,30g,170,7,5,14,2,1,balanced|vegetarian|vegan|high_protein,peanut,snack
+Almonds,fat,30g,174,6,6,15,4,1,balanced|vegetarian|vegan,tree_nut,snack
+Cashews,fat,30g,165,5,9,13,1,2,balanced|vegetarian|vegan,tree_nut,snack
+Olive Oil,fat,1 tbsp,119,0,0,14,0,0,balanced|vegetarian|vegan|low_carb,,lunch|dinner
+Avocado,fat,100g,160,2,9,15,7,1,balanced|vegetarian|vegan|low_carb,,breakfast|snack
+Spinach,vegetable,1 cup cooked,41,5,7,0,4,1,balanced|vegetarian|vegan|low_carb,,lunch|dinner
+Broccoli,vegetable,1 cup cooked,55,4,11,1,5,2,balanced|vegetarian|vegan|low_carb,,lunch|dinner
+Carrot,vegetable,1 medium,25,1,6,0,2,3,balanced|vegetarian|vegan|low_carb,,lunch|dinner|snack
+Cucumber,vegetable,1 cup,16,1,4,0,1,2,balanced|vegetarian|vegan|low_carb,,lunch|dinner|snack
+Mixed Salad,vegetable,2 cups,40,2,8,0,3,3,balanced|vegetarian|vegan|low_carb,,lunch|dinner
+Cauliflower,vegetable,1 cup cooked,29,2,5,0,3,2,balanced|vegetarian|vegan|low_carb,,lunch|dinner
+Cabbage,vegetable,1 cup cooked,35,2,8,0,3,4,balanced|vegetarian|vegan|low_carb,,lunch|dinner
+Tomato,vegetable,1 medium,22,1,5,0,1,3,balanced|vegetarian|vegan|low_carb,,breakfast|lunch|dinner
+Protein Shake,protein,1 scoop,120,24,3,2,0,1,balanced|high_protein,milk,breakfast|snack
+Cottage Cheese,protein,100g,98,11,3,4,0,3,balanced|vegetarian|high_protein,milk,breakfast|snack
+Muri Puffed Rice,carb,2 cups,110,2,24,0,1,0,balanced|vegetarian|vegan,,snack
+Chira Flattened Rice,carb,1 cup,180,4,38,1,2,1,balanced|vegetarian|vegan,,breakfast|snack
+Khichuri,meal,1 plate,420,16,65,10,8,3,balanced|vegetarian,,lunch|dinner
+Vegetable Soup,meal,1 bowl,90,4,15,2,4,5,balanced|vegetarian|vegan|low_carb,,lunch|dinner|snack
+Chicken Soup,meal,1 bowl,150,18,8,5,1,2,balanced|high_protein,,lunch|dinner|snack

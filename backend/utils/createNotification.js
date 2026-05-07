@@ -1,5 +1,17 @@
 const Notification = require("../models/Notification");
 
+/**
+ * Safely creates a notification.
+ * This helper is used by controllers such as bookingController.
+ *
+ * Expected fields:
+ * - user: user id who receives the notification
+ * - title: notification title
+ * - message: notification message
+ * - type: booking, weekly_goal, progress, review, feedback, promotion, system
+ * - link: optional frontend route
+ * - metadata: optional object
+ */
 const createNotification = async ({
   user,
   title,
@@ -20,6 +32,7 @@ const createNotification = async ({
       type,
       link,
       metadata,
+      isRead: false,
     });
 
     return notification;
