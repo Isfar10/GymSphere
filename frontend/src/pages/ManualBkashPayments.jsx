@@ -1,40 +1,51 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-
 import Navbar from "../components/Navbar";
 import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
 
 const GYMSPHERE_BKASH_NUMBER = "01799089557";
 
-const DEFAULT_MEMBERSHIP_PLANS = [
+const FALLBACK_MEMBERSHIP_PLANS = [
   {
-    id: "default-1-year",
-    name: "1 Year",
-    price: 20000,
-    durationDays: 365,
-    isDefaultPlan: true,
-  },
-  {
-    id: "default-6-month",
-    name: "6 Month",
-    price: 11000,
-    durationDays: 180,
-    isDefaultPlan: true,
+    id: "default-1-month",
+    _id: "default-1-month",
+    name: "1 Month",
+    description: "1 month GymSphere membership plan",
+    price: 3000,
+    durationDays: 30,
+    isActive: true,
+    isPopular: false,
   },
   {
     id: "default-3-month",
-    name: "3 Month",
+    _id: "default-3-month",
+    name: "3 Months",
+    description: "3 months GymSphere membership plan",
     price: 6500,
     durationDays: 90,
-    isDefaultPlan: true,
+    isActive: true,
+    isPopular: true,
   },
   {
-    id: "default-1-month",
-    name: "1 Month",
-    price: 3000,
-    durationDays: 30,
-    isDefaultPlan: true,
+    id: "default-6-month",
+    _id: "default-6-month",
+    name: "6 Months",
+    description: "6 months GymSphere membership plan",
+    price: 11000,
+    durationDays: 180,
+    isActive: true,
+    isPopular: false,
+  },
+  {
+    id: "default-1-year",
+    _id: "default-1-year",
+    name: "1 Year",
+    description: "1 year GymSphere membership plan",
+    price: 20000,
+    durationDays: 365,
+    isActive: true,
+    isPopular: false,
   },
 ];
 
@@ -48,11 +59,14 @@ function ManualBkashPayments() {
   const [adminBkashNumber, setAdminBkashNumber] = useState(
     GYMSPHERE_BKASH_NUMBER
   );
+
   const [selectedPlanId, setSelectedPlanId] = useState("");
   const [bkashNumber, setBkashNumber] = useState("");
   const [transactionId, setTransactionId] = useState("");
+
   const [adminFilter, setAdminFilter] = useState("pending");
   const [adminNote, setAdminNote] = useState({});
+
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
@@ -68,27 +82,83 @@ function ManualBkashPayments() {
     user?.bkashNumber ||
     "";
 
-  const visiblePlans = plans.length > 0 ? plans : DEFAULT_MEMBERSHIP_PLANS;
+  const visiblePlans = plans.length > 0 ? plans : FALLBACK_MEMBERSHIP_PLANS;
 
   const selectedPlan = useMemo(() => {
-    return visiblePlans.find(
-      (plan) => String(plan.id) === String(selectedPlanId)
-    );
+    return visiblePlans.find((plan) => {
+      const planValue = plan.id || plan._id;
+      return String(planValue) === String(selectedPlanId);
+    });
   }, [visiblePlans, selectedPlanId]);
 
   const paymentStats = useMemo(() => {
     const pending = adminPayments.filter(
       (payment) => payment.status === "pending"
     ).length;
+
     const approved = adminPayments.filter(
       (payment) => payment.status === "approved"
     ).length;
+
     const rejected = adminPayments.filter(
       (payment) => payment.status === "rejected"
     ).length;
 
     return { pending, approved, rejected };
   }, [adminPayments]);
+
+  const normalizePlans = (rawPlans) => {
+    return (rawPlans || [])
+      .filter((plan) => plan && plan.isActive !== false)
+      .map((plan) => ({
+        ...plan,
+        id: plan.id || plan._id,
+        _id: plan._id || plan.id,
+      }))
+      .filter((plan) => plan.id);
+  };
+
+  const chooseSelectedPlan = (availablePlans) => {
+    const planIdFromUrl = searchParams.get("planId");
+
+    if (
+      planIdFromUrl &&
+      availablePlans.some(
+        (plan) => String(plan.id || plan._id) === String(planIdFromUrl)
+      )
+    ) {
+      setSelectedPlanId(planIdFromUrl);
+      return;
+    }
+
+    setSelectedPlanId((previousPlanId) => {
+      const previousPlanStillExists = availablePlans.some(
+        (plan) => String(plan.id || plan._id) === String(previousPlanId)
+      );
+
+      if (previousPlanStillExists) {
+        return previousPlanId;
+      }
+
+      return availablePlans[0]?.id || availablePlans[0]?._id || "";
+    });
+  };
+
+  const fetchAdminPayments = async () => {
+    if (!isAdmin) {
+      return;
+    }
+
+    const adminResponse = await API.get(
+      `/manual-bkash-payments/admin?status=${adminFilter}`
+    );
+
+    setAdminPayments(adminResponse.data.payments || []);
+
+    if (adminResponse.data.adminBkashNumber) {
+      setAdminBkashNumber(adminResponse.data.adminBkashNumber);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -100,9 +170,7 @@ function ManualBkashPayments() {
         API.get("/manual-bkash-payments/my-payments"),
       ]);
 
-      const fetchedPlans = plansResponse.data.plans || [];
-      const usablePlans =
-        fetchedPlans.length > 0 ? fetchedPlans : DEFAULT_MEMBERSHIP_PLANS;
+      const fetchedPlans = normalizePlans(plansResponse.data.plans);
 
       setPlans(fetchedPlans);
       setMyPayments(myPaymentsResponse.data.payments || []);
@@ -113,43 +181,20 @@ function ManualBkashPayments() {
         setAdminBkashNumber(GYMSPHERE_BKASH_NUMBER);
       }
 
-      const planIdFromUrl = searchParams.get("planId");
-
-      if (
-        planIdFromUrl &&
-        usablePlans.some((plan) => String(plan.id) === String(planIdFromUrl))
-      ) {
-        setSelectedPlanId(planIdFromUrl);
-      } else if (!selectedPlanId && usablePlans.length > 0) {
-        setSelectedPlanId(usablePlans[0].id);
-      }
+      chooseSelectedPlan(
+        fetchedPlans.length > 0 ? fetchedPlans : FALLBACK_MEMBERSHIP_PLANS
+      );
 
       if (!bkashNumber && userPhoneNumber) {
         setBkashNumber(userPhoneNumber);
       }
 
-      if (isAdmin) {
-        const adminResponse = await API.get(
-          `/manual-bkash-payments/admin?status=${adminFilter}`
-        );
-
-        setAdminPayments(adminResponse.data.payments || []);
-
-        if (adminResponse.data.adminBkashNumber) {
-          setAdminBkashNumber(adminResponse.data.adminBkashNumber);
-        }
-      }
+      await fetchAdminPayments();
     } catch (err) {
-      const planIdFromUrl = searchParams.get("planId");
-
       setPlans([]);
       setAdminBkashNumber(GYMSPHERE_BKASH_NUMBER);
 
-      if (planIdFromUrl) {
-        setSelectedPlanId(planIdFromUrl);
-      } else if (!selectedPlanId) {
-        setSelectedPlanId(DEFAULT_MEMBERSHIP_PLANS[0].id);
-      }
+      chooseSelectedPlan(FALLBACK_MEMBERSHIP_PLANS);
 
       if (!bkashNumber && userPhoneNumber) {
         setBkashNumber(userPhoneNumber);
@@ -157,7 +202,7 @@ function ManualBkashPayments() {
 
       setError(
         err.response?.data?.message ||
-          "Failed to load bKash payment data. Showing default membership plans."
+          "Failed to load live plans. You can still submit using default bKash plans."
       );
     } finally {
       setLoading(false);
@@ -166,6 +211,7 @@ function ManualBkashPayments() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, adminFilter]);
 
   useEffect(() => {
@@ -201,26 +247,18 @@ function ManualBkashPayments() {
       return;
     }
 
-    if (selectedPlan?.isDefaultPlan) {
-      setError(
-        "This default plan is visible in the frontend, but it is not saved in the database yet. Login as admin and create these plans, or use Seed Default Plans if your backend supports it."
-      );
-      return;
-    }
-
     try {
       setActionLoading(true);
       setError("");
 
       await API.post("/manual-bkash-payments", {
         planId: selectedPlanId,
-        bkashNumber,
-        transactionId,
+        bkashNumber: bkashNumber.trim(),
+        transactionId: transactionId.trim(),
       });
 
       resetForm();
       await fetchData();
-
       showSuccess("Payment submitted. Please wait for admin approval.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit payment.");
@@ -246,7 +284,6 @@ function ManualBkashPayments() {
       });
 
       await fetchData();
-
       showSuccess("Payment approved and membership activated.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to approve payment.");
@@ -267,7 +304,6 @@ function ManualBkashPayments() {
       });
 
       await fetchData();
-
       showSuccess("Payment rejected.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to reject payment.");
@@ -333,6 +369,14 @@ function ManualBkashPayments() {
             <section style={styles.card}>
               <h2 style={styles.sectionTitle}>Submit bKash Payment</h2>
 
+              {plans.length === 0 && (
+                <div style={styles.warningBox}>
+                  Live database plans were not found. Default plans are loaded,
+                  and the backend will automatically create the selected plan
+                  during submission.
+                </div>
+              )}
+
               <form onSubmit={submitPayment} style={styles.paymentForm}>
                 <label style={styles.label}>
                   Membership Plan
@@ -341,17 +385,22 @@ function ManualBkashPayments() {
                     onChange={(event) => setSelectedPlanId(event.target.value)}
                     style={styles.input}
                   >
-                    {visiblePlans.map((plan) => (
-                      <option key={plan.id} value={plan.id}>
-                        {plan.name} - {formatCurrency(plan.price)}
-                      </option>
-                    ))}
+                    {visiblePlans.map((plan) => {
+                      const planValue = plan.id || plan._id;
+
+                      return (
+                        <option key={planValue} value={planValue}>
+                          {plan.name} - {formatCurrency(plan.price)}
+                        </option>
+                      );
+                    })}
                   </select>
                 </label>
 
                 <label style={styles.label}>
                   Sender bKash Number
                   <input
+                    type="text"
                     value={bkashNumber}
                     onChange={(event) => setBkashNumber(event.target.value)}
                     placeholder="Enter your bKash number"
@@ -362,6 +411,7 @@ function ManualBkashPayments() {
                 <label style={styles.label}>
                   Transaction ID
                   <input
+                    type="text"
                     value={transactionId}
                     onChange={(event) => setTransactionId(event.target.value)}
                     placeholder="Example: A1B2C3D4E5"
@@ -372,17 +422,20 @@ function ManualBkashPayments() {
                 {selectedPlan && (
                   <div style={styles.selectedPlanBox}>
                     <strong>{selectedPlan.name}</strong>
-                    <p>
-                      Amount: {formatCurrency(selectedPlan.price)} • Duration:{" "}
-                      {selectedPlan.durationDays} days
-                    </p>
+                    <br />
+                    Amount: {formatCurrency(selectedPlan.price)} • Duration:{" "}
+                    {selectedPlan.durationDays} days
                   </div>
                 )}
 
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  style={styles.primaryButton}
+                  style={{
+                    ...styles.primaryButton,
+                    opacity: actionLoading ? 0.6 : 1,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                  }}
                 >
                   Submit Payment Proof
                 </button>
@@ -408,16 +461,30 @@ function ManualBkashPayments() {
                         <th style={styles.th}>Admin Note</th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {myPayments.map((payment) => (
-                        <tr key={payment.id}>
-                          <td style={styles.td}>{payment.plan?.name}</td>
+                        <tr key={payment.id || payment._id}>
+                          <td style={styles.td}>{payment.plan?.name || "N/A"}</td>
                           <td style={styles.td}>
                             {formatCurrency(payment.amount)}
                           </td>
                           <td style={styles.td}>{payment.bkashNumber}</td>
                           <td style={styles.td}>{payment.transactionId}</td>
-                          <td style={styles.td}>{payment.status}</td>
+                          <td style={styles.td}>
+                            <span
+                              style={{
+                                ...styles.statusBadge,
+                                ...(payment.status === "approved"
+                                  ? styles.statusApproved
+                                  : payment.status === "rejected"
+                                  ? styles.statusRejected
+                                  : styles.statusPending),
+                              }}
+                            >
+                              {payment.status}
+                            </span>
+                          </td>
                           <td style={styles.td}>
                             {formatDate(payment.createdAt)}
                           </td>
@@ -463,31 +530,42 @@ function ManualBkashPayments() {
                 ) : (
                   <div style={styles.adminList}>
                     {adminPayments.map((payment) => (
-                      <article key={payment.id} style={styles.adminPaymentCard}>
+                      <div
+                        key={payment.id || payment._id}
+                        style={styles.adminPaymentCard}
+                      >
                         <div>
                           <h3 style={styles.adminPaymentTitle}>
-                            {payment.user?.name} - {payment.plan?.name}
+                            {payment.user?.name || "Unknown User"} -{" "}
+                            {payment.plan?.name || "N/A"}
                           </h3>
+
                           <p style={styles.adminPaymentText}>
-                            {payment.user?.email} • Submitted{" "}
+                            {payment.user?.email || "No email"} • Submitted{" "}
                             {formatDate(payment.createdAt)}
                           </p>
+
                           <p style={styles.adminPaymentText}>
                             Amount: {formatCurrency(payment.amount)} • Sender:{" "}
                             {payment.bkashNumber} • Transaction ID:{" "}
                             {payment.transactionId}
                           </p>
+
                           <p style={styles.adminPaymentText}>
-                            Status: <strong>{payment.status}</strong>
+                            Status: {payment.status}
                           </p>
                         </div>
 
                         {payment.status === "pending" && (
                           <div style={styles.adminActions}>
                             <input
-                              value={adminNote[payment.id] || ""}
+                              type="text"
+                              value={adminNote[payment.id || payment._id] || ""}
                               onChange={(event) =>
-                                updateAdminNote(payment.id, event.target.value)
+                                updateAdminNote(
+                                  payment.id || payment._id,
+                                  event.target.value
+                                )
                               }
                               placeholder="Admin note"
                               style={styles.input}
@@ -495,7 +573,9 @@ function ManualBkashPayments() {
 
                             <button
                               type="button"
-                              onClick={() => approvePayment(payment.id)}
+                              onClick={() =>
+                                approvePayment(payment.id || payment._id)
+                              }
                               disabled={actionLoading}
                               style={styles.primaryButton}
                             >
@@ -504,7 +584,9 @@ function ManualBkashPayments() {
 
                             <button
                               type="button"
-                              onClick={() => rejectPayment(payment.id)}
+                              onClick={() =>
+                                rejectPayment(payment.id || payment._id)
+                              }
                               disabled={actionLoading}
                               style={styles.dangerButton}
                             >
@@ -512,7 +594,7 @@ function ManualBkashPayments() {
                             </button>
                           </div>
                         )}
-                      </article>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -583,6 +665,14 @@ const styles = {
     background: "#fee2e2",
     color: "#991b1b",
     border: "1px solid #fecaca",
+    borderRadius: "14px",
+    padding: "12px 14px",
+    marginBottom: "14px",
+  },
+  warningBox: {
+    background: "#fef3c7",
+    color: "#92400e",
+    border: "1px solid #fde68a",
     borderRadius: "14px",
     padding: "12px 14px",
     marginBottom: "14px",
@@ -702,6 +792,26 @@ const styles = {
     borderBottom: "1px solid #f3f4f6",
     color: "#374151",
     verticalAlign: "top",
+  },
+  statusBadge: {
+    display: "inline-flex",
+    borderRadius: "999px",
+    padding: "5px 10px",
+    fontWeight: 900,
+    fontSize: "12px",
+    textTransform: "uppercase",
+  },
+  statusApproved: {
+    background: "#dcfce7",
+    color: "#166534",
+  },
+  statusRejected: {
+    background: "#fee2e2",
+    color: "#991b1b",
+  },
+  statusPending: {
+    background: "#fef3c7",
+    color: "#92400e",
   },
   adminSection: {
     marginTop: "34px",

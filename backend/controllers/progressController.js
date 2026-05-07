@@ -18,12 +18,37 @@ const normalizeDate = (dateString) => {
   return `${year}-${month}-${date}`;
 };
 
+const getCurrentUser = async (req) => {
+  return User.findById(req.user.userId).select("-password");
+};
+
+const canUseProgress = (user) => {
+  return user && allowedRoles.includes(user.role);
+};
+
+const numberOrNull = (value) => {
+  if (value === "" || value === undefined || value === null) {
+    return null;
+  }
+
+  return Number(value);
+};
+
+const numberOrZero = (value) => {
+  if (value === "" || value === undefined || value === null) {
+    return 0;
+  }
+
+  return Number(value);
+};
+
 const formatProgressLog = (log) => ({
   id: log._id,
   _id: log._id,
   trainee: log.trainee
     ? {
         id: log.trainee._id,
+        _id: log.trainee._id,
         name: log.trainee.name,
         email: log.trainee.email,
       }
@@ -31,12 +56,18 @@ const formatProgressLog = (log) => ({
   user: log.trainee
     ? {
         id: log.trainee._id,
+        _id: log.trainee._id,
         name: log.trainee.name,
         email: log.trainee.email,
       }
     : null,
   date: log.date,
   weight: log.weight,
+  bodyFat: log.bodyFat,
+  chest: log.chest,
+  waist: log.waist,
+  arms: log.arms,
+  legs: log.legs,
   workoutMinutes: log.workoutMinutes,
   workoutDuration: log.workoutMinutes,
   caloriesBurned: log.caloriesBurned,
@@ -104,35 +135,31 @@ const buildSummary = (logs) => {
   };
 };
 
-const getCurrentUser = async (req) => {
-  return User.findById(req.user.userId).select("-password");
-};
-
-const requireProgressAccess = (currentUser, res) => {
-  if (!currentUser) {
-    res.status(404).json({
-      success: false,
-      message: "User not found",
-    });
-    return false;
+const sendSafeNotification = async (payload) => {
+  try {
+    await createNotification(payload);
+  } catch {
+    // Do not break progress saving if notification creation fails.
   }
-
-  if (!allowedRoles.includes(currentUser.role)) {
-    res.status(403).json({
-      success: false,
-      message: "Only trainees and trainers can access progress tracking",
-    });
-    return false;
-  }
-
-  return true;
 };
 
 const getMyProgressLogs = async (req, res) => {
   try {
     const currentUser = await getCurrentUser(req);
 
-    if (!requireProgressAccess(currentUser, res)) return;
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!canUseProgress(currentUser)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only trainees and trainers can access progress tracking",
+      });
+    }
 
     const { startDate, endDate } = req.query;
 
@@ -228,6 +255,11 @@ const createProgressLog = async (req, res) => {
     const {
       date,
       weight,
+      bodyFat,
+      chest,
+      waist,
+      arms,
+      legs,
       workoutMinutes,
       workoutDuration,
       caloriesBurned,
@@ -238,7 +270,19 @@ const createProgressLog = async (req, res) => {
 
     const currentUser = await getCurrentUser(req);
 
-    if (!requireProgressAccess(currentUser, res)) return;
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!canUseProgress(currentUser)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only trainees and trainers can create progress logs",
+      });
+    }
 
     const normalizedDate = normalizeDate(date);
 
@@ -257,7 +301,8 @@ const createProgressLog = async (req, res) => {
     if (existingLog) {
       return res.status(400).json({
         success: false,
-        message: "A progress log already exists for this date. Delete it or edit it instead.",
+        message:
+          "A progress log already exists for this date. Delete it first or use another date.",
       });
     }
 
@@ -267,11 +312,16 @@ const createProgressLog = async (req, res) => {
     const progressLog = await ProgressLog.create({
       trainee: currentUser._id,
       date: normalizedDate,
-      weight: weight === "" || weight === undefined ? null : Number(weight),
-      workoutMinutes: Number(finalWorkoutMinutes || 0),
-      caloriesBurned: Number(caloriesBurned || 0),
-      performanceScore: Number(performanceScore || 0),
-      workoutsCompleted: Number(workoutsCompleted || 0),
+      weight: numberOrNull(weight),
+      bodyFat: numberOrNull(bodyFat),
+      chest: numberOrNull(chest),
+      waist: numberOrNull(waist),
+      arms: numberOrNull(arms),
+      legs: numberOrNull(legs),
+      workoutMinutes: numberOrZero(finalWorkoutMinutes),
+      caloriesBurned: numberOrZero(caloriesBurned),
+      performanceScore: numberOrZero(performanceScore),
+      workoutsCompleted: numberOrZero(workoutsCompleted),
       notes: notes || "",
     });
 
@@ -280,21 +330,17 @@ const createProgressLog = async (req, res) => {
       "name email"
     );
 
-    try {
-      await createNotification({
-        user: currentUser._id,
-        title: "Progress logged",
-        message: `Your progress for ${normalizedDate} has been saved successfully.`,
-        type: "progress",
-        link: "/progress",
-        metadata: {
-          progressLogId: progressLog._id,
-          date: normalizedDate,
-        },
-      });
-    } catch {
-      // Keep progress saving successful even if notification creation fails.
-    }
+    await sendSafeNotification({
+      user: currentUser._id,
+      title: "Progress logged",
+      message: `Your progress for ${normalizedDate} has been saved successfully.`,
+      type: "progress",
+      link: "/progress",
+      metadata: {
+        progressLogId: progressLog._id,
+        date: normalizedDate,
+      },
+    });
 
     return res.status(201).json({
       success: true,
@@ -314,6 +360,11 @@ const updateProgressLog = async (req, res) => {
     const {
       date,
       weight,
+      bodyFat,
+      chest,
+      waist,
+      arms,
+      legs,
       workoutMinutes,
       workoutDuration,
       caloriesBurned,
@@ -324,7 +375,19 @@ const updateProgressLog = async (req, res) => {
 
     const currentUser = await getCurrentUser(req);
 
-    if (!requireProgressAccess(currentUser, res)) return;
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!canUseProgress(currentUser)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only trainees and trainers can update progress logs",
+      });
+    }
 
     const progressLog = await ProgressLog.findById(req.params.id);
 
@@ -368,26 +431,29 @@ const updateProgressLog = async (req, res) => {
       progressLog.date = normalizedDate;
     }
 
-    if (weight !== undefined) {
-      progressLog.weight = weight === "" || weight === null ? null : Number(weight);
-    }
+    if (weight !== undefined) progressLog.weight = numberOrNull(weight);
+    if (bodyFat !== undefined) progressLog.bodyFat = numberOrNull(bodyFat);
+    if (chest !== undefined) progressLog.chest = numberOrNull(chest);
+    if (waist !== undefined) progressLog.waist = numberOrNull(waist);
+    if (arms !== undefined) progressLog.arms = numberOrNull(arms);
+    if (legs !== undefined) progressLog.legs = numberOrNull(legs);
 
     if (workoutMinutes !== undefined || workoutDuration !== undefined) {
-      progressLog.workoutMinutes = Number(
-        workoutMinutes !== undefined ? workoutMinutes : workoutDuration || 0
+      progressLog.workoutMinutes = numberOrZero(
+        workoutMinutes !== undefined ? workoutMinutes : workoutDuration
       );
     }
 
     if (caloriesBurned !== undefined) {
-      progressLog.caloriesBurned = Number(caloriesBurned || 0);
+      progressLog.caloriesBurned = numberOrZero(caloriesBurned);
     }
 
     if (performanceScore !== undefined) {
-      progressLog.performanceScore = Number(performanceScore || 0);
+      progressLog.performanceScore = numberOrZero(performanceScore);
     }
 
     if (workoutsCompleted !== undefined) {
-      progressLog.workoutsCompleted = Number(workoutsCompleted || 0);
+      progressLog.workoutsCompleted = numberOrZero(workoutsCompleted);
     }
 
     if (notes !== undefined) {

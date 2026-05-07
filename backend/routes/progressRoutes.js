@@ -11,6 +11,7 @@ const {
 
 const router = express.Router();
 
+router.get("/", protect, getMyProgressLogs);
 router.get("/mine", protect, getMyProgressLogs);
 router.get("/my-progress", protect, getMyProgressLogs);
 

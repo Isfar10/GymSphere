@@ -1,5 +1,6 @@
 const WeeklyGoal = require("../models/WeeklyGoal");
 const User = require("../models/User");
+const createNotification = require("../utils/createNotification");
 
 const allowedRoles = ["trainee", "trainer"];
 
@@ -28,17 +29,31 @@ const getMondayOfWeek = (dateString) => {
   return `${year}-${month}-${date}`;
 };
 
+const getCurrentUser = async (req) => {
+  return User.findById(req.user.userId).select("-password");
+};
+
+const canUseGoals = (user) => {
+  return user && allowedRoles.includes(user.role);
+};
+
 const formatGoal = (goal) => {
+  const completedCount = Number(goal.completedCount || 0);
+  const targetCount = Number(goal.targetCount || 0);
+  const isCompleted = targetCount > 0 && completedCount >= targetCount;
+
   const progressPercentage =
-    goal.targetCount > 0
-      ? Math.min(100, Math.round((goal.completedCount / goal.targetCount) * 100))
+    targetCount > 0
+      ? Math.min(100, Math.round((completedCount / targetCount) * 100))
       : 0;
 
   return {
     id: goal._id,
+    _id: goal._id,
     trainee: goal.trainee
       ? {
           id: goal.trainee._id,
+          _id: goal.trainee._id,
           name: goal.trainee.name,
           email: goal.trainee.email,
         }
@@ -50,42 +65,39 @@ const formatGoal = (goal) => {
     targetCount: goal.targetCount,
     completedCount: goal.completedCount,
     unit: goal.unit,
-    isCompleted: goal.completedCount >= goal.targetCount,
+    status: isCompleted ? "completed" : "active",
+    isCompleted,
     progressPercentage,
     createdAt: goal.createdAt,
     updatedAt: goal.updatedAt,
   };
 };
 
-const getCurrentUser = async (req) => {
-  return User.findById(req.user.userId).select("-password");
-};
-
-const requireGoalAccess = (currentUser, res) => {
-  if (!currentUser) {
-    res.status(404).json({
-      success: false,
-      message: "User not found",
-    });
-    return false;
+const sendSafeNotification = async (payload) => {
+  try {
+    await createNotification(payload);
+  } catch {
+    // Do not break weekly goals if notification creation fails.
   }
-
-  if (!allowedRoles.includes(currentUser.role)) {
-    res.status(403).json({
-      success: false,
-      message: "Only trainees and trainers can access weekly goals",
-    });
-    return false;
-  }
-
-  return true;
 };
 
 const getMyWeeklyGoals = async (req, res) => {
   try {
     const currentUser = await getCurrentUser(req);
 
-    if (!requireGoalAccess(currentUser, res)) return;
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!canUseGoals(currentUser)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only trainees and trainers can access weekly goals",
+      });
+    }
 
     const requestedWeekStart = req.query.weekStart
       ? getMondayOfWeek(req.query.weekStart)
@@ -105,13 +117,15 @@ const getMyWeeklyGoals = async (req, res) => {
       .populate("trainee", "name email")
       .sort({ createdAt: -1 });
 
+    const formattedGoals = goals.map(formatGoal);
+
     const summary = goals.reduce(
       (acc, goal) => {
         acc.totalGoals += 1;
-        acc.totalTarget += goal.targetCount;
-        acc.totalCompleted += goal.completedCount;
+        acc.totalTarget += Number(goal.targetCount || 0);
+        acc.totalCompleted += Number(goal.completedCount || 0);
 
-        if (goal.completedCount >= goal.targetCount) {
+        if (Number(goal.completedCount || 0) >= Number(goal.targetCount || 0)) {
           acc.completedGoals += 1;
         }
 
@@ -137,7 +151,8 @@ const getMyWeeklyGoals = async (req, res) => {
       success: true,
       weekStart: requestedWeekStart,
       summary,
-      goals: goals.map(formatGoal),
+      goals: formattedGoals,
+      weeklyGoals: formattedGoals,
     });
   } catch (error) {
     return res.status(500).json({
@@ -154,12 +169,24 @@ const createWeeklyGoal = async (req, res) => {
 
     const currentUser = await getCurrentUser(req);
 
-    if (!requireGoalAccess(currentUser, res)) return;
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!canUseGoals(currentUser)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only trainees and trainers can create weekly goals",
+      });
+    }
 
     if (!title || !targetCount) {
       return res.status(400).json({
         success: false,
-        message: "Title and target count are required",
+        message: "Goal title and target count are required",
       });
     }
 
@@ -190,6 +217,18 @@ const createWeeklyGoal = async (req, res) => {
       "name email"
     );
 
+    await sendSafeNotification({
+      user: currentUser._id,
+      title: "Weekly goal created",
+      message: `Your weekly goal "${title}" has been created. Keep going!`,
+      type: "weekly_goal",
+      link: "/weekly-goals",
+      metadata: {
+        goalId: goal._id,
+        weekStart: normalizedWeekStart,
+      },
+    });
+
     return res.status(201).json({
       success: true,
       message: "Weekly goal created successfully",
@@ -210,7 +249,19 @@ const updateWeeklyGoal = async (req, res) => {
 
     const currentUser = await getCurrentUser(req);
 
-    if (!requireGoalAccess(currentUser, res)) return;
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!canUseGoals(currentUser)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only trainees and trainers can update weekly goals",
+      });
+    }
 
     const goal = await WeeklyGoal.findById(req.params.id).populate(
       "trainee",
@@ -283,7 +334,19 @@ const updateWeeklyGoalProgress = async (req, res) => {
 
     const currentUser = await getCurrentUser(req);
 
-    if (!requireGoalAccess(currentUser, res)) return;
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (!canUseGoals(currentUser)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only trainees and trainers can update weekly goal progress",
+      });
+    }
 
     const goal = await WeeklyGoal.findById(req.params.id).populate(
       "trainee",
@@ -303,6 +366,8 @@ const updateWeeklyGoalProgress = async (req, res) => {
         message: "You can only update your own weekly goals",
       });
     }
+
+    const wasCompleted = goal.completedCount >= goal.targetCount;
 
     if (completedCount !== undefined) {
       goal.completedCount = Number(completedCount);
@@ -331,6 +396,23 @@ const updateWeeklyGoalProgress = async (req, res) => {
     }
 
     await goal.save();
+
+    const isNowCompleted = goal.completedCount >= goal.targetCount;
+
+    if (!wasCompleted && isNowCompleted) {
+      await sendSafeNotification({
+        user: currentUser._id,
+        title: "Weekly goal completed",
+        message: `Great job! You completed your weekly goal "${goal.title}".`,
+        type: "weekly_goal",
+        link: "/weekly-goals",
+        metadata: {
+          goalId: goal._id,
+          completedCount: goal.completedCount,
+          targetCount: goal.targetCount,
+        },
+      });
+    }
 
     const updatedGoal = await WeeklyGoal.findById(goal._id).populate(
       "trainee",

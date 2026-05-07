@@ -16,6 +16,26 @@ const progressLogSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    bodyFat: {
+      type: Number,
+      default: null,
+    },
+    chest: {
+      type: Number,
+      default: null,
+    },
+    waist: {
+      type: Number,
+      default: null,
+    },
+    arms: {
+      type: Number,
+      default: null,
+    },
+    legs: {
+      type: Number,
+      default: null,
+    },
     workoutMinutes: {
       type: Number,
       default: 0,
