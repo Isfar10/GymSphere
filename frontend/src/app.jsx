@@ -10,6 +10,7 @@ import WeeklyGoals from "./pages/weeklyGoals";
 import Feedback from "./pages/Feedback";
 import TrainerMatching from "./pages/TrainerMatching";
 import Progress from "./pages/Progress";
+import FitnessComparison from "./pages/FitnessComparison";
 import Notifications from "./pages/Notifications";
 import SocialFeed from "./pages/SocialFeed";
 import AdminAnalytics from "./pages/AdminAnalytics";
@@ -17,14 +18,12 @@ import Memberships from "./pages/Memberships";
 import ManualBkashPayments from "./pages/ManualBkashPayments";
 import DietPlans from "./pages/DietPlans";
 import Store from "./pages/Store";
-import Messages from "./pages/Messages";
-
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -66,28 +65,19 @@ function App() {
       />
 
       <Route
+        path="/store"
+        element={
+          <ProtectedRoute>
+            <Store />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/weekly-goals"
         element={
           <ProtectedRoute>
             <WeeklyGoals />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/feedback"
-        element={
-          <ProtectedRoute>
-            <Feedback />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/trainer-matching"
-        element={
-          <ProtectedRoute>
-            <TrainerMatching />
           </ProtectedRoute>
         }
       />
@@ -102,28 +92,19 @@ function App() {
       />
 
       <Route
-        path="/notifications"
+        path="/fitness-comparison"
         element={
           <ProtectedRoute>
-            <Notifications />
+            <FitnessComparison />
           </ProtectedRoute>
         }
       />
 
       <Route
-        path="/social-feed"
+        path="/diet-plans"
         element={
           <ProtectedRoute>
-            <SocialFeed />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/admin-analytics"
-        element={
-          <ProtectedRoute>
-            <AdminAnalytics />
+            <DietPlans />
           </ProtectedRoute>
         }
       />
@@ -147,28 +128,46 @@ function App() {
       />
 
       <Route
-        path="/diet-plans"
+        path="/social-feed"
         element={
           <ProtectedRoute>
-            <DietPlans />
+            <SocialFeed />
           </ProtectedRoute>
         }
       />
 
       <Route
-        path="/store"
+        path="/trainer-matching"
         element={
           <ProtectedRoute>
-            <Store />
+            <TrainerMatching />
           </ProtectedRoute>
         }
       />
 
       <Route
-        path="/messages"
+        path="/notifications"
         element={
           <ProtectedRoute>
-            <Messages />
+            <Notifications />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin-analytics"
+        element={
+          <ProtectedRoute>
+            <AdminAnalytics />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/feedback"
+        element={
+          <ProtectedRoute>
+            <Feedback />
           </ProtectedRoute>
         }
       />
