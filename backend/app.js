@@ -16,6 +16,7 @@ const membershipRoutes = require("./routes/membershipRoutes");
 const manualBkashPaymentRoutes = require("./routes/manualBkashPaymentRoutes");
 const dietPlanRoutes = require("./routes/dietPlanRoutes");
 const storeRoutes = require("./routes/storeRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 
 const app = express();
 
@@ -41,5 +42,6 @@ app.use("/api/memberships", membershipRoutes);
 app.use("/api/manual-bkash-payments", manualBkashPaymentRoutes);
 app.use("/api/diet-plans", dietPlanRoutes);
 app.use("/api/store", storeRoutes);
+app.use("/api/messages", messageRoutes);
 
 module.exports = app;

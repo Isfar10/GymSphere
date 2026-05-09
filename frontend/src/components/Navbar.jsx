@@ -18,34 +18,34 @@ const navItems = [
     roles: ["admin", "trainer", "trainee"],
   },
   {
-    label: "Store",
-    path: "/store",
+    label: "Messages",
+    path: "/messages",
     roles: ["admin", "trainer", "trainee"],
   },
   {
     label: "Weekly Goals",
     path: "/weekly-goals",
-    roles: ["trainer", "trainee"],
+    roles: ["admin", "trainer", "trainee"],
   },
   {
     label: "Progress",
     path: "/progress",
-    roles: ["trainer", "trainee"],
+    roles: ["admin", "trainer", "trainee"],
   },
   {
     label: "Diet Plans",
     path: "/diet-plans",
-    roles: ["trainer", "trainee"],
+    roles: ["admin", "trainer", "trainee"],
   },
   {
     label: "Memberships",
     path: "/memberships",
-    roles: ["admin", "trainee"],
+    roles: ["admin", "trainer", "trainee"],
   },
   {
     label: "bKash",
     path: "/manual-bkash-payments",
-    roles: ["admin", "trainee"],
+    roles: ["admin", "trainer", "trainee"],
   },
   {
     label: "Social Feed",
@@ -135,7 +135,11 @@ function Navbar() {
             </div>
           )}
 
-          <button type="button" onClick={handleLogout} style={styles.logoutButton}>
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={styles.logoutButton}
+          >
             Logout
           </button>
         </div>

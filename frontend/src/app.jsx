@@ -17,16 +17,16 @@ import Memberships from "./pages/Memberships";
 import ManualBkashPayments from "./pages/ManualBkashPayments";
 import DietPlans from "./pages/DietPlans";
 import Store from "./pages/Store";
+import Messages from "./pages/Messages";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       <Route path="/login" element={<Login />} />
-
       <Route path="/register" element={<Register />} />
 
       <Route
@@ -66,19 +66,28 @@ function App() {
       />
 
       <Route
-        path="/store"
+        path="/weekly-goals"
         element={
           <ProtectedRoute>
-            <Store />
+            <WeeklyGoals />
           </ProtectedRoute>
         }
       />
 
       <Route
-        path="/weekly-goals"
+        path="/feedback"
         element={
           <ProtectedRoute>
-            <WeeklyGoals />
+            <Feedback />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/trainer-matching"
+        element={
+          <ProtectedRoute>
+            <TrainerMatching />
           </ProtectedRoute>
         }
       />
@@ -93,10 +102,28 @@ function App() {
       />
 
       <Route
-        path="/diet-plans"
+        path="/notifications"
         element={
           <ProtectedRoute>
-            <DietPlans />
+            <Notifications />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/social-feed"
+        element={
+          <ProtectedRoute>
+            <SocialFeed />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin-analytics"
+        element={
+          <ProtectedRoute>
+            <AdminAnalytics />
           </ProtectedRoute>
         }
       />
@@ -120,46 +147,28 @@ function App() {
       />
 
       <Route
-        path="/social-feed"
+        path="/diet-plans"
         element={
           <ProtectedRoute>
-            <SocialFeed />
+            <DietPlans />
           </ProtectedRoute>
         }
       />
 
       <Route
-        path="/trainer-matching"
+        path="/store"
         element={
           <ProtectedRoute>
-            <TrainerMatching />
+            <Store />
           </ProtectedRoute>
         }
       />
 
       <Route
-        path="/notifications"
+        path="/messages"
         element={
           <ProtectedRoute>
-            <Notifications />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/admin-analytics"
-        element={
-          <ProtectedRoute>
-            <AdminAnalytics />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/feedback"
-        element={
-          <ProtectedRoute>
-            <Feedback />
+            <Messages />
           </ProtectedRoute>
         }
       />
