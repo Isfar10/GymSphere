@@ -410,9 +410,147 @@ const deleteProgressLog = async (req, res) => {
   }
 };
 
+const getFitnessComparison = async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user.userId).select("-password");
+
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (currentUser.role !== "trainee") {
+      return res.status(403).json({
+        success: false,
+        message: "Only trainees can access fitness comparison",
+      });
+    }
+
+    const myLogs = await ProgressLog.find({
+      trainee: currentUser._id,
+    }).sort({ date: 1 });
+
+    const communityLogs = await ProgressLog.find({});
+
+    const summarize = (logs) => {
+      const totalLogs = logs.length;
+
+      const totalWorkoutMinutes = logs.reduce(
+        (sum, log) => sum + Number(log.workoutMinutes || 0),
+        0
+      );
+
+      const totalCaloriesBurned = logs.reduce(
+        (sum, log) => sum + Number(log.caloriesBurned || 0),
+        0
+      );
+
+      const totalWorkoutsCompleted = logs.reduce(
+        (sum, log) => sum + Number(log.workoutsCompleted || 0),
+        0
+      );
+
+      const scoredLogs = logs.filter(
+        (log) => Number(log.performanceScore || 0) > 0
+      );
+
+      const averagePerformanceScore =
+        scoredLogs.length > 0
+          ? Math.round(
+              scoredLogs.reduce(
+                (sum, log) => sum + Number(log.performanceScore || 0),
+                0
+              ) / scoredLogs.length
+            )
+          : 0;
+
+      return {
+        totalLogs,
+        totalWorkoutMinutes,
+        totalCaloriesBurned,
+        totalWorkoutsCompleted,
+        averageWorkoutMinutes:
+          totalLogs > 0 ? Math.round(totalWorkoutMinutes / totalLogs) : 0,
+        averageCaloriesBurned:
+          totalLogs > 0 ? Math.round(totalCaloriesBurned / totalLogs) : 0,
+        averageWorkoutsCompleted:
+          totalLogs > 0
+            ? Number((totalWorkoutsCompleted / totalLogs).toFixed(1))
+            : 0,
+        averagePerformanceScore,
+      };
+    };
+
+    const myStats = summarize(myLogs);
+    const communityStats = summarize(communityLogs);
+
+    const compareMetric = (myValue, communityValue) => {
+      if (!communityValue || communityValue <= 0) {
+        return {
+          difference: 0,
+          percentageDifference: 0,
+          status: "no-data",
+        };
+      }
+
+      const difference = Number((myValue - communityValue).toFixed(1));
+      const percentageDifference = Math.round(
+        (difference / communityValue) * 100
+      );
+
+      let status = "same";
+
+      if (percentageDifference > 0) status = "above";
+      if (percentageDifference < 0) status = "below";
+
+      return {
+        difference,
+        percentageDifference,
+        status,
+      };
+    };
+
+    const comparison = {
+      workoutMinutes: compareMetric(
+        myStats.averageWorkoutMinutes,
+        communityStats.averageWorkoutMinutes
+      ),
+      caloriesBurned: compareMetric(
+        myStats.averageCaloriesBurned,
+        communityStats.averageCaloriesBurned
+      ),
+      workoutsCompleted: compareMetric(
+        myStats.averageWorkoutsCompleted,
+        communityStats.averageWorkoutsCompleted
+      ),
+      performanceScore: compareMetric(
+        myStats.averagePerformanceScore,
+        communityStats.averagePerformanceScore
+      ),
+    };
+
+    return res.status(200).json({
+      success: true,
+      myStats,
+      communityStats,
+      comparison,
+      totalCommunityLogs: communityLogs.length,
+      totalMyLogs: myLogs.length,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getMyProgressLogs,
   createProgressLog,
   updateProgressLog,
   deleteProgressLog,
+  getFitnessComparison,
 };

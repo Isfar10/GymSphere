@@ -10,6 +10,7 @@ const defaultForm = {
   title: "",
   category: "workout",
   targetCount: "",
+  unit: "sessions",
   description: "",
 };
 
@@ -23,12 +24,14 @@ function WeeklyGoals() {
 
   const stats = useMemo(() => {
     const total = goals.length;
-    const completed = goals.filter((goal) => goal.status === "completed").length;
-    const active = goals.filter((goal) => goal.status !== "completed").length;
+    const completed = goals.filter((goal) => goal.isCompleted).length;
+    const active = total - completed;
+
     const totalTargets = goals.reduce(
       (sum, goal) => sum + Number(goal.targetCount || 0),
       0
     );
+
     const totalDone = goals.reduce(
       (sum, goal) => sum + Number(goal.completedCount || 0),
       0
@@ -45,13 +48,18 @@ function WeeklyGoals() {
     };
   }, [goals]);
 
+  const showSuccess = (message) => {
+    setSuccess(message);
+    setTimeout(() => setSuccess(""), 2500);
+  };
+
   const fetchGoals = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const response = await API.get("/weekly-goals");
-      setGoals(response.data.goals || response.data.weeklyGoals || []);
+      const response = await API.get("/weekly-goals/mine");
+      setGoals(response.data.goals || []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load weekly goals.");
     } finally {
@@ -62,11 +70,6 @@ function WeeklyGoals() {
   useEffect(() => {
     fetchGoals();
   }, []);
-
-  const showSuccess = (message) => {
-    setSuccess(message);
-    setTimeout(() => setSuccess(""), 2500);
-  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -84,8 +87,15 @@ function WeeklyGoals() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!form.title.trim() || !form.targetCount) {
-      setError("Goal title and target count are required.");
+    const targetCount = Number(form.targetCount);
+
+    if (!form.title.trim()) {
+      setError("Goal title is required.");
+      return;
+    }
+
+    if (!targetCount || targetCount < 1) {
+      setError("Target count must be at least 1.");
       return;
     }
 
@@ -94,10 +104,11 @@ function WeeklyGoals() {
       setError("");
 
       await API.post("/weekly-goals", {
-        title: form.title,
+        title: form.title.trim(),
         category: form.category,
-        targetCount: Number(form.targetCount),
-        description: form.description,
+        targetCount,
+        unit: form.unit || "sessions",
+        description: form.description.trim(),
       });
 
       resetForm();
@@ -110,33 +121,24 @@ function WeeklyGoals() {
     }
   };
 
-  const incrementGoal = async (goalId) => {
+  const updateGoalProgress = async (goalId, action) => {
     try {
       setActionLoading(true);
       setError("");
 
-      await API.patch(`/weekly-goals/${goalId}/increment`);
+      await API.patch(`/weekly-goals/${goalId}/progress`, {
+        action,
+      });
 
       await fetchGoals();
-      showSuccess("Goal progress updated.");
+
+      if (action === "complete") {
+        showSuccess("Goal marked as completed.");
+      } else {
+        showSuccess("Goal progress updated.");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update goal.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const completeGoal = async (goalId) => {
-    try {
-      setActionLoading(true);
-      setError("");
-
-      await API.patch(`/weekly-goals/${goalId}/complete`);
-
-      await fetchGoals();
-      showSuccess("Goal marked as completed.");
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to complete goal.");
     } finally {
       setActionLoading(false);
     }
@@ -159,6 +161,10 @@ function WeeklyGoals() {
   };
 
   const getProgressPercent = (goal) => {
+    if (goal.progressPercentage !== undefined) {
+      return Number(goal.progressPercentage);
+    }
+
     const target = Number(goal.targetCount || 0);
     const completed = Number(goal.completedCount || 0);
 
@@ -247,11 +253,11 @@ function WeeklyGoals() {
                   className="gs-input"
                 >
                   <option value="workout">Workout</option>
-                  <option value="nutrition">Nutrition</option>
                   <option value="cardio">Cardio</option>
-                  <option value="strength">Strength</option>
+                  <option value="nutrition">Nutrition</option>
+                  <option value="weight">Weight</option>
                   <option value="habit">Habit</option>
-                  <option value="other">Other</option>
+                  <option value="custom">Custom</option>
                 </select>
               </label>
 
@@ -264,6 +270,17 @@ function WeeklyGoals() {
                   value={form.targetCount}
                   onChange={handleChange}
                   placeholder="4"
+                  className="gs-input"
+                />
+              </label>
+
+              <label className="gs-label">
+                Unit
+                <input
+                  name="unit"
+                  value={form.unit}
+                  onChange={handleChange}
+                  placeholder="sessions"
                   className="gs-input"
                 />
               </label>
@@ -330,10 +347,12 @@ function WeeklyGoals() {
           ) : (
             <div style={styles.goalGrid}>
               {goals.map((goal) => {
+                const goalId = goal.id || goal._id;
                 const percent = getProgressPercent(goal);
+                const isCompleted = Boolean(goal.isCompleted);
 
                 return (
-                  <article key={goal.id || goal._id} style={styles.goalCard}>
+                  <article key={goalId} style={styles.goalCard}>
                     <div style={styles.goalTop}>
                       <div>
                         <span className="gs-pill">{goal.category || "goal"}</span>
@@ -343,13 +362,14 @@ function WeeklyGoals() {
                         </p>
                       </div>
 
-                      <StatusBadge status={goal.status || "active"} />
+                      <StatusBadge status={isCompleted ? "completed" : "active"} />
                     </div>
 
                     <div style={styles.progressArea}>
                       <div style={styles.progressText}>
                         <span>
-                          {goal.completedCount || 0}/{goal.targetCount || 0}
+                          {goal.completedCount || 0}/{goal.targetCount || 0}{" "}
+                          {goal.unit || ""}
                         </span>
                         <strong>{percent}%</strong>
                       </div>
@@ -367,8 +387,8 @@ function WeeklyGoals() {
                     <div style={styles.actionRow}>
                       <button
                         type="button"
-                        onClick={() => incrementGoal(goal.id || goal._id)}
-                        disabled={actionLoading || goal.status === "completed"}
+                        onClick={() => updateGoalProgress(goalId, "increment")}
+                        disabled={actionLoading || isCompleted}
                         className="gs-button"
                       >
                         +1 Progress
@@ -376,8 +396,8 @@ function WeeklyGoals() {
 
                       <button
                         type="button"
-                        onClick={() => completeGoal(goal.id || goal._id)}
-                        disabled={actionLoading || goal.status === "completed"}
+                        onClick={() => updateGoalProgress(goalId, "complete")}
+                        disabled={actionLoading || isCompleted}
                         className="gs-button-outline"
                       >
                         Complete
@@ -385,7 +405,7 @@ function WeeklyGoals() {
 
                       <button
                         type="button"
-                        onClick={() => deleteGoal(goal.id || goal._id)}
+                        onClick={() => deleteGoal(goalId)}
                         disabled={actionLoading}
                         className="gs-button-danger"
                       >

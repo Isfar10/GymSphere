@@ -16,6 +16,9 @@ import AdminAnalytics from "./pages/AdminAnalytics";
 import Memberships from "./pages/Memberships";
 import ManualBkashPayments from "./pages/ManualBkashPayments";
 import DietPlans from "./pages/DietPlans";
+import Messages from "./pages/Messages";
+import FitnessComparison from "./pages/FitnessComparison";
+import VideoCall from "./pages/VideoCall";
 
 import Store from "./pages/Store";
 
@@ -85,6 +88,15 @@ function App() {
       />
 
       <Route
+        path="/fitness-comparison"
+        element={
+          <ProtectedRoute>
+            <FitnessComparison />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/diet-plans"
         element={
           <ProtectedRoute>
@@ -143,6 +155,24 @@ function App() {
         element={
           <ProtectedRoute>
             <Notifications />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/messages"
+        element={
+          <ProtectedRoute>
+            <Messages />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/video-call"
+        element={
+          <ProtectedRoute>
+            <VideoCall />
           </ProtectedRoute>
         }
       />
